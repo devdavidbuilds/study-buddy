@@ -1,0 +1,724 @@
+/* ========================================
+   CODE LAB — premium IDE module
+   Light Sakura chrome around a dark,
+   VS-Code-style editor & console core.
+   ======================================== */
+
+.codelab-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.codelab-shell.is-fullscreen {
+  background: #1E1A20;
+}
+
+/* ---- Header ---- */
+.codelab-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 253, 249, 0.9);
+  flex-shrink: 0;
+}
+
+.codelab-header-back {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+.codelab-header-back:hover { color: var(--color-accent); }
+
+.codelab-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.codelab-header-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.codelab-header-title h1 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+}
+
+.codelab-header-title span {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.codelab-header-stats {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-5);
+}
+
+.codelab-header-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+/* ---- Toolbar ---- */
+.codelab-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.codelab-lang-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.codelab-lang-select select {
+  appearance: none;
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.codelab-lang-select svg {
+  position: absolute;
+  right: var(--space-3);
+  pointer-events: none;
+  color: var(--color-accent);
+}
+
+.codelab-toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.codelab-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: rgba(46, 46, 46, 0.04);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+.codelab-tool-btn:hover { background: rgba(46, 46, 46, 0.07); color: var(--text-primary); }
+.codelab-tool-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.codelab-tool-btn.primary {
+  background: var(--color-success);
+  color: white;
+}
+.codelab-tool-btn.primary:hover { background: #4EA463; }
+
+.codelab-tool-btn.accent {
+  background: var(--gradient-accent);
+  color: white;
+}
+.codelab-tool-btn.accent:hover { filter: brightness(1.05); }
+
+.codelab-toolbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.codelab-tool-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+.codelab-tool-icon-btn:hover { background: rgba(46, 46, 46, 0.06); color: var(--color-accent); }
+.codelab-tool-icon-btn.active { background: var(--color-accent-muted); color: var(--color-accent); }
+
+.codelab-settings-wrap { position: relative; }
+
+.codelab-settings-dropdown {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3) var(--space-4);
+  z-index: 50;
+  min-width: 160px;
+}
+
+.codelab-settings-dropdown span {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.codelab-font-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.codelab-font-controls button {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(46, 46, 46, 0.06);
+  font-weight: 700;
+}
+
+/* ---- Verdict banner ---- */
+.codelab-verdict-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+.codelab-verdict-banner.accepted { background: var(--color-success-muted); color: #2E7A44; }
+.codelab-verdict-banner.rejected { background: var(--color-danger-muted); color: #A5443C; }
+.codelab-verdict-banner button {
+  margin-left: auto;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.7;
+}
+.codelab-verdict-banner button:hover { opacity: 1; }
+
+/* ---- Body grid ---- */
+.codelab-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr 320px;
+  min-height: 0;
+  position: relative;
+}
+
+.codelab-center {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border-left: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+}
+
+/* ---- Left sidebar ---- */
+.codelab-sidebar {
+  background: var(--bg-surface);
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.codelab-sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: rgba(46, 46, 46, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-tertiary);
+}
+.codelab-sidebar-search input {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.codelab-view-tabs {
+  display: flex;
+  gap: var(--space-1);
+  background: rgba(46, 46, 46, 0.03);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+.codelab-view-tabs button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: var(--space-2);
+  border-radius: 8px;
+  color: var(--text-tertiary);
+}
+.codelab-view-tabs button.active { background: var(--bg-surface); color: var(--color-accent); box-shadow: var(--shadow-sm); }
+
+.codelab-filter-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.codelab-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.codelab-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(46, 46, 46, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.codelab-chip:hover { background: rgba(46, 46, 46, 0.09); }
+.codelab-chip.active { background: var(--color-accent); color: white; }
+.codelab-chip.diff-easy.active { background: var(--color-success); }
+.codelab-chip.diff-medium.active { background: var(--color-warning); }
+.codelab-chip.diff-hard.active { background: var(--color-danger); }
+
+.codelab-problem-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.codelab-problem-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.codelab-problem-item:hover { background: rgba(46, 46, 46, 0.03); }
+.codelab-problem-item.active { background: var(--color-accent-muted); }
+
+.codelab-problem-status { flex-shrink: 0; width: 16px; display: flex; align-items: center; justify-content: center; }
+.solved-icon { color: var(--color-success); }
+.unsolved-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-color-active); }
+
+.codelab-problem-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.codelab-problem-title { font-size: var(--font-size-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.codelab-problem-meta { font-size: 10.5px; color: var(--text-tertiary); }
+
+.codelab-bookmark-btn { color: var(--text-muted); flex-shrink: 0; }
+.codelab-bookmark-btn.active { color: var(--color-warning); }
+
+.codelab-diff-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+.codelab-diff-tag.diff-easy { background: var(--color-success-muted); color: #2E7A44; }
+.codelab-diff-tag.diff-medium { background: var(--color-warning-muted); color: #8A5A1E; }
+.codelab-diff-tag.diff-hard { background: var(--color-danger-muted); color: #A5443C; }
+
+.codelab-empty-list { font-size: var(--font-size-xs); color: var(--text-tertiary); text-align: center; padding: var(--space-6) 0; }
+
+/* ---- Editor tabs ---- */
+.editor-tabs {
+  display: flex;
+  align-items: center;
+  background: #17141A;
+  border-bottom: 1px solid #2A242C;
+  padding: 0 var(--space-2);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.editor-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: #9A929C;
+  border-right: 1px solid #2A242C;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.editor-tab.active {
+  background: #1E1A20;
+  color: #F0E8EA;
+  border-top: 2px solid var(--color-accent);
+}
+.editor-tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-warning); }
+.editor-tab-close { color: #6E666F; padding: 2px; border-radius: 4px; }
+.editor-tab-close:hover { background: #332C36; color: #F0E8EA; }
+.editor-tab-add { color: #6E666F; padding: 6px; }
+.editor-tab-add:hover { color: var(--color-primary); }
+
+.codelab-editor-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---- Editor status bar ---- */
+.editor-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px var(--space-4);
+  background: var(--color-accent);
+  color: white;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.statusbar-left, .statusbar-right { display: flex; align-items: center; gap: var(--space-4); }
+.statusbar-badge { font-weight: 700; background: rgba(255,255,255,0.2); padding: 1px 8px; border-radius: var(--radius-full); }
+.statusbar-zoom-btn { color: white; opacity: 0.85; }
+.statusbar-zoom-btn:hover { opacity: 1; }
+.statusbar-saved { opacity: 0.85; }
+
+/* ---- Console ---- */
+.codelab-console {
+  flex-shrink: 0;
+  background: #1E1A20;
+  border-top: 1px solid #2A242C;
+  display: flex;
+  flex-direction: column;
+  height: 300px;
+  transition: height var(--transition-base);
+}
+.codelab-console.collapsed { height: 40px; }
+
+.codelab-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-3);
+  height: 40px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #2A242C;
+}
+
+.codelab-console-tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+}
+.codelab-console-tabs button {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #9A929C;
+  padding: 6px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.codelab-console-tabs button.active { background: #2A242C; color: #F4B3CE; }
+.codelab-console-tabs button:hover { color: #F0E8EA; }
+
+.codelab-console-header-right { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; }
+.codelab-status-line { font-size: 11px; color: #B8ADB2; }
+.codelab-console-collapse { color: #9A929C; padding: 4px; }
+.codelab-console-collapse:hover { color: white; }
+
+.codelab-console-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+}
+
+.codelab-console-pane { display: flex; flex-direction: column; gap: var(--space-3); height: 100%; }
+.codelab-console-hint { font-size: var(--font-size-xs); color: #8A8290; }
+
+.codelab-console-textarea {
+  flex: 1;
+  min-height: 80px;
+  background: #17141A;
+  border: 1px solid #2A242C;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  color: #F0E8EA;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: var(--font-size-sm);
+  resize: vertical;
+}
+
+.codelab-console-output {
+  background: #17141A;
+  border: 1px solid #2A242C;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  color: #D9CFD2;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.codelab-console-output.is-error { color: #F09088; }
+
+.codelab-logs { display: flex; flex-direction: column; gap: 6px; }
+.codelab-log-line { display: flex; gap: var(--space-3); font-size: var(--font-size-xs); color: #C8BEC3; }
+.codelab-log-time { color: #6E666F; font-family: monospace; flex-shrink: 0; }
+
+/* ---- Output summary ---- */
+.codelab-output-summary {
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: #17141A;
+  border: 1px solid #2A242C;
+}
+.codelab-output-summary.success { border-color: rgba(91, 185, 116, 0.4); }
+.codelab-output-summary.partial { border-color: rgba(240, 169, 78, 0.4); }
+.codelab-output-summary.error { border-color: rgba(226, 104, 94, 0.4); }
+.codelab-output-status { font-weight: 700; color: #F0E8EA; font-size: var(--font-size-sm); }
+.codelab-output-stats { display: flex; gap: var(--space-5); margin-top: var(--space-3); }
+.codelab-output-stats span { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-size-xs); color: #B8ADB2; }
+
+/* ---- Test cases ---- */
+.codelab-testcases { display: flex; flex-direction: column; gap: var(--space-3); height: 100%; }
+.codelab-testcases-toolbar { display: flex; gap: var(--space-2); flex-shrink: 0; }
+.codelab-testcases-toolbar .btn { font-size: 11px; padding: 6px 10px; }
+
+.codelab-testcases-list { display: flex; flex-direction: column; gap: var(--space-3); overflow-y: auto; }
+
+.codelab-testcase-card {
+  background: #17141A;
+  border: 1px solid #2A242C;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.codelab-testcase-card.passed { border-color: rgba(91, 185, 116, 0.45); }
+.codelab-testcase-card.failed { border-color: rgba(226, 104, 94, 0.45); }
+.codelab-testcase-card.locked { opacity: 0.6; }
+
+.codelab-testcase-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #D9CFD2;
+  margin-bottom: var(--space-2);
+}
+.codelab-testcase-actions { display: flex; align-items: center; gap: var(--space-2); }
+.codelab-testcase-actions button { color: #8A8290; }
+.codelab-testcase-actions button:hover { color: #F4B3CE; }
+.tc-pass-icon { color: #5BB974; }
+.tc-fail-icon { color: #E2685E; }
+
+.codelab-testcase-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: #6E666F; margin: var(--space-2) 0 4px; }
+.codelab-testcase-card textarea {
+  width: 100%;
+  background: #100E12;
+  border: 1px solid #2A242C;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #F0E8EA;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.codelab-testcase-result { display: flex; justify-content: space-between; font-size: 11px; color: #B8ADB2; margin-top: var(--space-2); }
+.codelab-testcase-result code { color: #F4B3CE; }
+.codelab-hidden-note { font-size: 11px; color: #6E666F; }
+
+/* ---- Problem details panel ---- */
+.codelab-details-panel {
+  background: var(--bg-surface);
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.codelab-details-header h2 { font-size: var(--font-size-xl); margin-bottom: var(--space-3); }
+.codelab-details-meta { display: flex; gap: var(--space-3); align-items: center; font-size: var(--font-size-xs); color: var(--text-tertiary); margin-bottom: var(--space-3); }
+.codelab-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-4); }
+.codelab-tag { font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: var(--radius-full); background: var(--color-secondary); color: var(--color-accent); }
+
+.codelab-details-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--space-4);
+}
+.codelab-details-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-tertiary);
+  border-bottom: 2px solid transparent;
+}
+.codelab-details-tabs button.active { color: var(--color-accent); border-color: var(--color-accent); }
+
+.codelab-statement { font-size: var(--font-size-sm); line-height: var(--line-height-relaxed); color: var(--text-primary); margin-bottom: var(--space-4); }
+.codelab-details-body h4 { font-size: var(--font-size-sm); margin: var(--space-4) 0 var(--space-2); }
+.codelab-constraints { padding-left: var(--space-5); }
+.codelab-constraints li { font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: 4px; }
+.codelab-constraints code, .codelab-example code { background: rgba(46,46,46,0.05); padding: 1px 6px; border-radius: 5px; font-size: 11.5px; }
+.codelab-format-text { font-size: var(--font-size-sm); color: var(--text-secondary); }
+
+.codelab-example {
+  background: rgba(46, 46, 46, 0.025);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-xs);
+}
+.codelab-example-row { margin-bottom: 4px; }
+.codelab-example-explain { color: var(--text-tertiary); margin-top: 4px; }
+
+.codelab-hints { display: flex; flex-direction: column; gap: var(--space-3); }
+.codelab-hint-card { background: var(--color-secondary); border-radius: var(--radius-md); padding: var(--space-3); }
+.codelab-hint-num { font-size: 10.5px; font-weight: 700; color: var(--color-accent); text-transform: uppercase; }
+.codelab-hint-card p { font-size: var(--font-size-sm); margin-top: 4px; }
+.codelab-hints-done { font-size: var(--font-size-sm); color: var(--text-tertiary); text-align: center; padding: var(--space-4) 0; }
+
+.codelab-editorial p { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); }
+.codelab-editorial-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-tertiary);
+}
+.codelab-editorial-locked p { font-size: var(--font-size-sm); max-width: 260px; }
+
+/* ---- AI Panel ---- */
+.codelab-ai-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-color);
+  box-shadow: var(--shadow-2xl);
+  display: flex;
+  flex-direction: column;
+  z-index: 80;
+  animation: slideInRight 0.25s ease-out;
+}
+
+.codelab-ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 700;
+}
+.codelab-ai-header span { display: inline-flex; align-items: center; gap: 8px; color: var(--color-accent); }
+.codelab-ai-header button { color: var(--text-tertiary); }
+
+.codelab-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-color);
+  max-height: 130px;
+  overflow-y: auto;
+}
+.codelab-ai-action-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+}
+.codelab-ai-action-chip:hover { background: var(--color-accent); color: white; }
+
+.codelab-ai-messages { flex: 1; overflow-y: auto; padding: var(--space-4) var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+.codelab-ai-message.user { align-self: flex-end; }
+.codelab-ai-bubble {
+  background: rgba(46, 46, 46, 0.04);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  max-width: 280px;
+}
+.codelab-ai-message.user .codelab-ai-bubble { background: var(--gradient-accent); color: white; }
+
+.codelab-ai-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-color);
+}
+.codelab-ai-input-row input { flex: 1; font-size: var(--font-size-sm); padding: var(--space-2); }
+.codelab-ai-input-row button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gradient-accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.codelab-ai-input-row button:disabled { opacity: 0.5; }
+
+/* ---- Responsive ---- */
+@media (max-width: 1200px) {
+  .codelab-body { grid-template-columns: 220px 1fr 280px; }
+}
+
+@media (max-width: 1024px) {
+  .codelab-body { grid-template-columns: 1fr; }
+  .codelab-sidebar, .codelab-details-panel { display: none; }
+  .codelab-header-stats { display: none; }
+  .codelab-ai-panel { width: 100%; }
+}

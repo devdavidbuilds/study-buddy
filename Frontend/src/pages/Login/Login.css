@@ -1,0 +1,202 @@
+/* ========================================
+   LOGIN PAGE STYLES
+   ======================================== */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--bg-primary);
+}
+
+.login-illustration {
+  background: var(--gradient-hero);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-8);
+}
+
+.login-illustration::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-mesh);
+}
+
+.login-illustration .illustration-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 420px;
+}
+
+.login-illustration .illustration-icon {
+  font-size: 6rem;
+  margin-bottom: var(--space-8);
+  display: block;
+  animation: float 4s ease-in-out infinite;
+}
+
+.login-illustration h2 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-4);
+}
+
+.login-illustration p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-relaxed);
+}
+
+.login-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-10);
+}
+
+.login-card .login-header {
+  margin-bottom: var(--space-8);
+}
+
+.login-card .login-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.login-card .login-logo .logo-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--gradient-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+}
+
+.login-card .login-logo h1 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.login-card .login-header h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-2);
+}
+
+.login-card .login-header p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.login-form .form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.login-form .remember-me {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.login-form .remember-me input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.login-form .forgot-link {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  transition: color var(--transition-fast);
+}
+
+.login-form .forgot-link:hover { color: var(--color-primary-hover); }
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-2) 0;
+}
+
+.login-divider span {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.social-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(46, 46, 46, 0.025);
+  border: 1px solid var(--border-color);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.social-btn:hover {
+  background: rgba(46, 46, 46, 0.05);
+  color: var(--text-primary);
+  border-color: var(--border-color-hover);
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.login-footer a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 1024px) {
+  .login-page { grid-template-columns: 1fr; }
+  .login-illustration { display: none; }
+}
