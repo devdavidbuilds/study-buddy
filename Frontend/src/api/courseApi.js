@@ -1,6 +1,7 @@
 import API from './api';
 
-export const getCourses = () => API.get('/courses');
+export const getCourses = (params = {}) =>
+  API.get('/courses', { params });
 
 export const getCourse = (id) => API.get(`/courses/${id}`);
 

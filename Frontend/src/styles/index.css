@@ -457,3 +457,109 @@ select {
     --font-size-7xl: 3.5rem;
   }
 }
+
+/* ========================================
+   SAKURA NIGHT — Dark Theme Overrides
+   Only active when data-theme="dark" is set
+   on <html>. Light theme (:root) is untouched.
+   ======================================== */
+
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary: #0E0B14;
+  --bg-surface: #161221;
+  --bg-card: #1A1528;
+  --bg-card-hover: #201A30;
+  --bg-elevated: #1E1830;
+  --bg-sunken: #0A0810;
+
+  /* Sakura accent colors — kept close to original for brand continuity */
+  --color-primary: #F4B3CE;
+  --color-primary-hover: #F8C8DC;
+  --color-primary-muted: rgba(244, 179, 206, 0.15);
+  --color-secondary: #2A1F3D;
+  --color-accent: #E75480;
+  --color-accent-hover: #EE6A94;
+  --color-accent-muted: rgba(231, 84, 128, 0.18);
+  --color-lavender: #C9B6E4;
+  --color-lavender-muted: rgba(201, 182, 228, 0.12);
+
+  /* Semantic colors — slightly brighter for dark backgrounds */
+  --color-success: #6ACC85;
+  --color-success-muted: rgba(106, 204, 133, 0.15);
+  --color-warning: #F0B060;
+  --color-warning-muted: rgba(240, 176, 96, 0.15);
+  --color-danger: #F07068;
+  --color-danger-muted: rgba(240, 112, 104, 0.15);
+  --color-info: #7BB8E8;
+  --color-info-muted: rgba(123, 184, 232, 0.15);
+
+  /* Text */
+  --text-primary: #EDE6E8;
+  --text-secondary: #A89EA8;
+  --text-tertiary: #706878;
+  --text-muted: #504858;
+  --text-on-accent: #FFFFFF;
+
+  /* Borders */
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-color-hover: rgba(231, 84, 128, 0.30);
+  --border-color-active: rgba(231, 84, 128, 0.45);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #F4B3CE 0%, #E75480 100%);
+  --gradient-secondary: linear-gradient(135deg, #2A1F3D 0%, #1E1830 100%);
+  --gradient-accent: linear-gradient(135deg, #E75480 0%, #D6416F 100%);
+  --gradient-hero: linear-gradient(160deg, #0E0B14 0%, #161221 45%, #1A1528 100%);
+  --gradient-card: linear-gradient(145deg, rgba(244, 179, 206, 0.06) 0%, rgba(201, 182, 228, 0.03) 100%);
+  --gradient-glow: radial-gradient(ellipse at center, rgba(231, 84, 128, 0.15) 0%, transparent 70%);
+  --gradient-mesh: radial-gradient(at 40% 20%, rgba(244, 179, 206, 0.10) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(201, 182, 228, 0.08) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(42, 31, 61, 0.30) 0px, transparent 50%);
+
+  /* Shadows — cooler, moonlit */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.30), 0 1px 3px rgba(0, 0, 0, 0.20);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.35), 0 4px 8px rgba(0, 0, 0, 0.20);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.40), 0 8px 16px rgba(0, 0, 0, 0.20);
+  --shadow-2xl: 0 32px 64px rgba(0, 0, 0, 0.50);
+  --shadow-glow: 0 0 24px rgba(231, 84, 128, 0.22), 0 0 60px rgba(244, 179, 206, 0.10);
+  --shadow-glow-sm: 0 0 14px rgba(231, 84, 128, 0.18);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.20);
+
+  /* Glass — dark translucent */
+  --glass-bg: rgba(22, 18, 33, 0.75);
+  --glass-bg-light: rgba(14, 11, 20, 0.60);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  /* blur values stay the same */
+}
+
+/* ---- Scrollbar (dark) ---- */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(244, 179, 206, 0.18);
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 179, 206, 0.32);
+}
+
+/* ---- Selection (dark) ---- */
+[data-theme="dark"] ::selection {
+  background: rgba(231, 84, 128, 0.45);
+  color: #EDE6E8;
+}
+
+/* ---- Theme transition — smooth switch ---- */
+body {
+  transition: background-color 250ms ease, color 250ms ease;
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .petal-field { display: none !important; }
+  .animate-float,
+  .animate-pulse,
+  .animate-glow,
+  .animate-shimmer,
+  .animate-spin { animation: none !important; }
+}
+

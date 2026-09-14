@@ -1,13 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Sparkles, X, Send } from 'lucide-react';
+import { aiActions, getAiResponse } from '../../data/codeLabData';
 
-export default function AIPanel({ open, onClose, problem, lastError }) {
+export default function AIPanel({ open, onClose, problem, lastError, code, language, lastOutput }) {
   const [messages, setMessages] = useState([]);
-  const aiActions = [
-    { id: 'give-hint', label: 'Give me a hint' },
-    { id: 'explain-error', label: 'Explain my error' },
-    { id: 'walkthrough', label: 'Walk me through the solution' },
-  ];
   const [input, setInput] = useState('');
   const [hintIndex, setHintIndex] = useState(0);
   const scrollRef = useRef(null);
@@ -26,15 +22,15 @@ export default function AIPanel({ open, onClose, problem, lastError }) {
     setMessages(prev => [...prev, { role: 'user', text: label }]);
     setTimeout(() => {
       let response;
-      if (actionId === 'give-hint') {
-        response = `Try to break the problem into smaller steps and inspect the sample cases before coding the full solution.`;
-        setHintIndex(n => Math.min(n + 1, 2));
-      } else if (actionId === 'explain-error') {
+      if (actionId === 'explain-error') {
         response = lastError
-          ? `The issue seems to be around ${lastError}. Review the latest test case and compare your output with the expected behavior.`
+          ? `The issue seems to be around: \`${lastError.substring(0, 200)}\`. Review the latest test case and compare your output with the expected behavior.`
           : "I don't see any errors from your last run — try running your code first, then ask again.";
+      } else if (actionId === 'give-hint') {
+        response = getAiResponse('give-hint', problem, hintIndex);
+        setHintIndex(n => Math.min(n + 1, (problem.hints?.length || 1) - 1));
       } else {
-        response = `For ${problem?.title || 'this challenge'}, start by identifying the input and the expected output, then map each step to a small helper function.`;
+        response = getAiResponse(actionId, problem, hintIndex);
       }
       setMessages(prev => [...prev, { role: 'ai', text: response }]);
     }, 450);

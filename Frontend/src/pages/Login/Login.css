@@ -99,6 +99,47 @@
   font-size: var(--font-size-sm);
 }
 
+/* ── Login Type Toggle ── */
+.login-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  background: rgba(46, 46, 46, 0.04);
+  border: 1px solid var(--border-color);
+  margin-bottom: var(--space-6);
+}
+
+.login-type-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.login-type-btn:hover {
+  color: var(--text-primary);
+  background: rgba(46, 46, 46, 0.04);
+}
+
+.login-type-btn.active {
+  background: var(--bg-primary);
+  color: var(--color-primary);
+  border-color: var(--border-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-weight: var(--font-weight-semibold);
+}
+
 .login-form {
   display: flex;
   flex-direction: column;

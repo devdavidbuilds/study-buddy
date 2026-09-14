@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import TestCasePanel from '../testcases/TestCasePanel';
 import OutputSummary from '../output/OutputSummary';
+import SubmissionHistory from '../codelab/SubmissionHistory';
 
-const TABS = ['Input', 'Output', 'Error', 'Execution', 'Test Cases', 'Logs', 'Compilation'];
+const TABS = ['Input', 'Output', 'Error', 'Execution', 'Test Cases', 'History', 'Logs', 'Compilation'];
 
 export default function ConsolePanel({
   collapsed, onToggleCollapse,
   customInput, onCustomInputChange, onRunCustom,
   lastOutput, lastError, executionResult, compileOutput, logs,
   testCaseProps, statusLine, running,
+  onLoadSubmissionCode,
 }) {
   const [tab, setTab] = useState('Test Cases');
 
@@ -42,7 +44,9 @@ export default function ConsolePanel({
                 onChange={e => onCustomInputChange(e.target.value)}
                 placeholder="Type custom input here..."
               />
-              <button className="btn btn-primary btn-sm" onClick={onRunCustom}>Run with this input</button>
+              <button className="btn btn-primary btn-sm" onClick={onRunCustom} disabled={running}>
+                {running ? 'Running...' : 'Run with this input'}
+              </button>
             </div>
           )}
 
@@ -93,6 +97,10 @@ export default function ConsolePanel({
 
           {tab === 'Test Cases' && (
             <TestCasePanel {...testCaseProps} />
+          )}
+
+          {tab === 'History' && (
+            <SubmissionHistory onLoadCode={onLoadSubmissionCode} />
           )}
 
           {tab === 'Logs' && (

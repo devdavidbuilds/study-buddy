@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, GraduationCap, BookOpen } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import GlassCard from '../../components/ui/GlassCard';
 import { login } from '../../api/authApi';
@@ -8,6 +8,7 @@ import { setAuthToken } from '../../api/api';
 import './Login.css';
 
 export default function Login() {
+  const [loginType, setLoginType] = useState('student');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,22 +34,49 @@ export default function Login() {
         response?.data?.data?.token;
 
       if (!token) {
-        setError('Login succeeded but no token was returned by the server.');
+        setError(
+          'Login succeeded but no token was returned by the server.'
+        );
         return;
       }
 
-      // Store JWT
-      setAuthToken(token);
+      // Get the role returned by the backend — never trust the toggle
+      const userRole =
+        response?.data?.user?.role ||
+        response?.data?.data?.user?.role ||
+        'student';
 
-      // Go to existing Study Buddy workspace
-      navigate('/workspace');
+      // Validate role against the selected login type
+      if (loginType === 'faculty') {
+        // Faculty login: only allow faculty or admin
+        if (userRole === 'student') {
+          setError(
+            'This account is registered as a student. Please use Student Login.'
+          );
+          return;
+        }
+        // Store JWT and navigate to faculty dashboard
+        setAuthToken(token);
+        navigate('/faculty');
+      } else {
+        // Student login: only allow students
+        if (userRole === 'faculty' || userRole === 'admin') {
+          setError(
+            'This account is registered as faculty. Please use Faculty Login.'
+          );
+          return;
+        }
+        // Store JWT and go to existing Study Buddy workspace
+        setAuthToken(token);
+        navigate('/workspace');
+      }
     } catch (err) {
       console.error('Login error:', err);
 
       setError(
         err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        'Unable to connect to the authentication service.'
+          err?.response?.data?.error ||
+          'Unable to connect to the authentication service.'
       );
     } finally {
       setLoading(false);
@@ -62,12 +90,16 @@ export default function Login() {
           <span className="illustration-icon">🎓</span>
 
           <h2>
-            Welcome to <span className="gradient-text">Study Buddy</span>
+            Welcome to{' '}
+            <span className="gradient-text">
+              Study Buddy
+            </span>
           </h2>
 
           <p>
-            Your calm, all-in-one academic workspace for learning,
-            planning, and growing. Join thousands of students worldwide.
+            Your calm, all-in-one academic workspace for
+            learning, planning, and growing. Join thousands
+            of students worldwide.
           </p>
         </div>
       </div>
@@ -83,11 +115,49 @@ export default function Login() {
             <h2>Welcome back</h2>
 
             <p>
-              Sign in to continue your learning journey
+              Sign in to continue your{' '}
+              {loginType === 'faculty'
+                ? 'teaching'
+                : 'learning'}{' '}
+              journey
             </p>
           </div>
 
-          <form className="login-form" onSubmit={handleSubmit}>
+          {/* ── Login Type Toggle ── */}
+          <div className="login-type-toggle">
+            <button
+              type="button"
+              className={`login-type-btn ${
+                loginType === 'student' ? 'active' : ''
+              }`}
+              onClick={() => {
+                setLoginType('student');
+                setError('');
+              }}
+            >
+              <GraduationCap size={18} />
+              Student
+            </button>
+
+            <button
+              type="button"
+              className={`login-type-btn ${
+                loginType === 'faculty' ? 'active' : ''
+              }`}
+              onClick={() => {
+                setLoginType('faculty');
+                setError('');
+              }}
+            >
+              <BookOpen size={18} />
+              Faculty
+            </button>
+          </div>
+
+          <form
+            className="login-form"
+            onSubmit={handleSubmit}
+          >
             <div className="input-group">
               <label className="input-label">
                 Email Address
@@ -104,7 +174,9 @@ export default function Login() {
                   className="input-field"
                   placeholder="you@university.edu"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
                   required
                 />
               </div>
@@ -122,18 +194,26 @@ export default function Login() {
                 />
 
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={
+                    showPassword
+                      ? 'text'
+                      : 'password'
+                  }
                   className="input-field"
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
                   required
                 />
 
                 <button
                   type="button"
                   className="input-action"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() =>
+                    setShowPassword(!showPassword)
+                  }
                   aria-label={
                     showPassword
                       ? 'Hide password'
@@ -173,7 +253,9 @@ export default function Login() {
               <a
                 href="#"
                 className="forgot-link"
-                onClick={(e) => e.preventDefault()}
+                onClick={(e) =>
+                  e.preventDefault()
+                }
               >
                 Forgot password?
               </a>
@@ -185,7 +267,11 @@ export default function Login() {
               style={{ width: '100%' }}
               disabled={loading}
             >
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading
+                ? 'Signing In...'
+                : loginType === 'faculty'
+                  ? 'Sign In as Faculty'
+                  : 'Sign In'}
             </Button>
           </form>
 
@@ -211,7 +297,9 @@ export default function Login() {
 
           <div className="login-footer">
             Don't have an account?{' '}
-            <Link to="/login">Sign up</Link>
+            <Link to="/signup">
+              Sign up
+            </Link>
           </div>
         </GlassCard>
       </div>

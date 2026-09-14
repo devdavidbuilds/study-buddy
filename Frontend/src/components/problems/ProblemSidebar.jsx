@@ -1,18 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Search, Bookmark, Star, Clock, CheckCircle2 } from 'lucide-react';
-
-const codeProblems = [
-  { id: 1, title: 'Two Sum', category: 'Arrays', difficulty: 'Easy', acceptance: 92, tags: ['Hash Map'] },
-  { id: 2, title: 'Longest Substring', category: 'Strings', difficulty: 'Medium', acceptance: 86, tags: ['Sliding Window'] },
-  { id: 3, title: 'Binary Search', category: 'Algorithms', difficulty: 'Easy', acceptance: 90, tags: ['Binary Search'] },
-];
-const categoryList = ['All', 'Arrays', 'Strings', 'Algorithms'];
-const difficultyList = ['Easy', 'Medium', 'Hard'];
+import { categoryList, difficultyList } from '../../data/codeLabData';
 
 const diffClass = { Easy: 'diff-easy', Medium: 'diff-medium', Hard: 'diff-hard' };
 
 export default function ProblemSidebar({
-  activeProblemId, onSelectProblem, solvedIds, bookmarkedIds, onToggleBookmark, recentIds,
+  problems, activeProblemId, onSelectProblem, solvedIds, bookmarkedIds, onToggleBookmark, recentIds,
 }) {
   const [query, setQuery] = useState('');
   const [difficulty, setDifficulty] = useState('All');
@@ -20,7 +13,7 @@ export default function ProblemSidebar({
   const [view, setView] = useState('all'); // all | bookmarks | recent
 
   const filtered = useMemo(() => {
-    let list = codeProblems;
+    let list = problems;
     if (view === 'bookmarks') list = list.filter(p => bookmarkedIds.includes(p.id));
     if (view === 'recent') list = list.filter(p => recentIds.includes(p.id));
     return list.filter(p => {
@@ -29,7 +22,13 @@ export default function ProblemSidebar({
       const matchTopic = topic === 'All' || p.category === topic;
       return matchQuery && matchDiff && matchTopic;
     });
-  }, [query, difficulty, topic, view, bookmarkedIds, recentIds]);
+  }, [problems, query, difficulty, topic, view, bookmarkedIds, recentIds]);
+
+  // Derive unique categories from problems list
+  const categories = useMemo(() => {
+    const cats = [...new Set(problems.map(p => p.category))];
+    return cats.sort();
+  }, [problems]);
 
   return (
     <aside className="codelab-sidebar">
@@ -67,7 +66,7 @@ export default function ProblemSidebar({
         <span className="codelab-filter-label">Topic</span>
         <div className="codelab-chip-row">
           <span className={`codelab-chip ${topic === 'All' ? 'active' : ''}`} onClick={() => setTopic('All')}>All</span>
-          {categoryList.map(c => (
+          {categories.map(c => (
             <span key={c} className={`codelab-chip ${topic === c ? 'active' : ''}`} onClick={() => setTopic(c)}>{c}</span>
           ))}
         </div>

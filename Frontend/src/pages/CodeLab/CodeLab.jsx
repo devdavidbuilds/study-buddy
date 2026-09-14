@@ -46,6 +46,25 @@ export default function CodeLab() {
   const [aiOpen, setAiOpen] = useState(false);
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
 
+  // Load persisted editor drafts from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('codelabCodeMap');
+      if (raw) setCodeMap(JSON.parse(raw));
+    } catch (e) {
+      // ignore parse errors
+    }
+  }, []);
+
+  // Persist editor drafts to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('codelabCodeMap', JSON.stringify(codeMap));
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [codeMap]);
+
   const [testCasesByProblem, setTestCasesByProblem] = useState({});
   const [results, setResults] = useState(null);
   const [executionResult, setExecutionResult] = useState(null);
@@ -71,7 +90,8 @@ export default function CodeLab() {
   const activeLang = languages.find(l => l.id === language);
   const codeKey = `${activeProblemId}:${language}`;
 
-  const testCases = testCasesByProblem[activeProblemId] || problem.defaultTestCases;
+  const defaultCasesFromExamples = (problem.examples || []).map((ex, i) => ({ id: i + 1, input: ex.input || '', expected: ex.output || '' }));
+  const testCases = testCasesByProblem[activeProblemId] ?? (problem.defaultTestCases ?? (defaultCasesFromExamples.length ? defaultCasesFromExamples : []));
 
   const pushLog = useCallback((message) => {
     setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), message }]);
@@ -161,7 +181,6 @@ export default function CodeLab() {
           testCases: subset,
           hiddenTestCases,
           problemId: activeProblemId,
-          userId: 'anonymous',
           onStage: stageFn,
         });
 
@@ -263,6 +282,17 @@ export default function CodeLab() {
     pushLog('Reset code to starter template.');
   };
 
+  const handleLoadSubmissionCode = (code, lang, problemId) => {
+    const pid = problemId || activeProblemId;
+    const langId = lang || language;
+    const key = `${pid}:${langId}`;
+    setActiveProblemId(pid);
+    setLanguage(langId);
+    setCodeMap(prev => ({ ...prev, [key]: code }));
+    setActiveTabId('main');
+    pushLog('Loaded submission into editor.');
+  };
+
   const handleDownload = () => {
     const code = codeMap[codeKey] ?? '';
     const blob = new Blob([code], { type: 'text/plain' });
@@ -361,6 +391,7 @@ export default function CodeLab() {
 
       <div className="codelab-body">
         <ProblemSidebar
+          problems={codeProblems}
           activeProblemId={activeProblemId}
           onSelectProblem={handleSelectProblem}
           solvedIds={solvedIds}
@@ -409,6 +440,7 @@ export default function CodeLab() {
             statusLine={statusLine}
             running={running || submitting}
             testCaseProps={testCaseHandlers}
+            onLoadSubmissionCode={handleLoadSubmissionCode}
           />
         </div>
 

@@ -83,7 +83,8 @@ const runCode = async (req, res) => {
 // ==============================
 const submitCode = async (req, res) => {
   try {
-    const { code, language, testCases, hiddenTestCases, problemId, userId } = req.body;
+    const { code, language, testCases, hiddenTestCases, problemId } = req.body;
+    const userId = req.user?._id || req.user?.id;
 
     if (!code || !language) {
       return res.status(400).json({
@@ -115,10 +116,10 @@ const submitCode = async (req, res) => {
     }
 
     // Save submission to database (if user context exists)
-    if (problemId) {
+    if (problemId && userId) {
       try {
         await Submission.create({
-          userId: userId || "anonymous",
+          userId: String(userId),
           problemId,
           language,
           code,
@@ -188,8 +189,11 @@ const validateTestCases = async (req, res) => {
 // ==============================
 const getSubmissions = async (req, res) => {
   try {
-    const userId = req.query.userId || 'anonymous';
-    const submissions = await Submission.find({ userId })
+    const userId = req.user?._id || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+    const submissions = await Submission.find({ userId: String(userId) })
       .sort({ createdAt: -1 })
       .limit(12)
       .lean();

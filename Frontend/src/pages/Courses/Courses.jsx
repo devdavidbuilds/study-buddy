@@ -1,6 +1,16 @@
-  import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, Users, Heart, Clock, BookOpen, Award, PlayCircle, ArrowRight } from 'lucide-react';
+import {
+  Star,
+  Users,
+  Heart,
+  Clock,
+  BookOpen,
+  Award,
+  PlayCircle,
+  ArrowRight,
+} from 'lucide-react';
+
 import GlassCard from '../../components/ui/GlassCard';
 import ProgressRing from '../../components/ui/ProgressRing';
 import SearchBar from '../../components/ui/SearchBar';
@@ -8,34 +18,207 @@ import PageState from '../../components/ui/PageState';
 import { getCourses } from '../../api/courseApi';
 import { getLevelColor } from '../../utils/helpers';
 
-const levels = ['All Levels', 'Beginner', 'Intermediate', 'Advanced'];
+const levels = [
+  'All Levels',
+  'Beginner',
+  'Intermediate',
+  'Advanced',
+];
+
 const sortOptions = [
   { id: 'recommended', label: 'Recommended' },
   { id: 'progress', label: 'My Progress' },
   { id: 'rating', label: 'Highest Rated' },
   { id: 'students', label: 'Most Popular' },
 ];
-const categories = ['All', 'Programming', 'Data Science', 'Design', 'Productivity'];
+
+const categories = [
+  'All',
+  'Programming',
+  'Data Science',
+  'Design',
+  'Productivity',
+];
+
+/*
+ * Convert the backend Course document into the
+ * shape expected by the existing frontend UI.
+ */
+const normalizeCourse = (course) => {
+  const modules = Array.isArray(course?.modules)
+    ? course.modules
+    : [];
+
+  const totalLessons = modules.reduce(
+    (total, module) =>
+      total +
+      (Array.isArray(module?.lessons)
+        ? module.lessons.length
+        : 0),
+    0
+  );
+
+  const completedLessons = modules.reduce(
+    (total, module) =>
+      total +
+      (Array.isArray(module?.lessons)
+        ? module.lessons.filter(
+            (lesson) => lesson?.done === true
+          ).length
+        : 0),
+    0
+  );
+
+  const progress =
+    totalLessons > 0
+      ? Math.round(
+          (completedLessons / totalLessons) * 100
+        )
+      : 0;
+
+  const instructor =
+    typeof course?.instructor === 'string'
+      ? course.instructor
+      : course?.faculty?.fullName || 'Study Buddy';
+
+  return {
+    ...course,
+
+    /*
+     * Frontend-compatible fields
+     */
+    title:
+      course?.courseName ||
+      course?.title ||
+      'Untitled Course',
+
+    instructor,
+
+    instructorTitle:
+      course?.instructorTitle ||
+      'Learning Specialist',
+
+    totalLessons,
+
+    completedLessons,
+
+    progress:
+      Number.isFinite(Number(course?.progress))
+        ? Number(course.progress)
+        : progress,
+
+    nextLesson:
+      course?.nextLesson ||
+      (totalLessons > completedLessons
+        ? modules
+            .flatMap((module) =>
+              Array.isArray(module?.lessons)
+                ? module.lessons
+                : []
+            )
+            .find(
+              (lesson) => !lesson?.done
+            )?.title
+        : null),
+
+    category:
+      course?.category ||
+      course?.subject ||
+      'Programming',
+
+    level:
+      course?.level ||
+      'Beginner',
+
+    students:
+      Number(course?.students) || 0,
+
+    rating:
+      Number(course?.rating) || 0,
+
+    duration:
+      course?.duration || '4 weeks',
+
+    skills:
+      Array.isArray(course?.skills)
+        ? course.skills
+        : [],
+
+    certificate:
+      Boolean(course?.certificate),
+
+    color:
+      course?.color || '#E75480',
+
+    thumbnail:
+      course?.thumbnail || '📘',
+  };
+};
 
 export default function Courses() {
   const navigate = useNavigate();
+
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [level, setLevel] = useState('All Levels');
   const [sort, setSort] = useState('recommended');
+
   const [courses, setCourses] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [wishlist, setWishlist] = useState(new Set());
+
+  const [wishlist, setWishlist] = useState(
+    new Set()
+  );
+
+  /*
+   * Pagination
+   *
+   * IMPORTANT:
+   * Do not render thousands of courses at once.
+   */
+  const [visibleCount, setVisibleCount] =
+    useState(24);
 
   const loadCourses = async () => {
     setLoading(true);
     setError('');
+
     try {
       const res = await getCourses();
-      setCourses(Array.isArray(res?.data?.data) ? res.data.data : []);
+
+      /*
+       * Backend response:
+       *
+       * {
+       *   success: true,
+       *   data: [...]
+       * }
+       */
+      const rawCourses = Array.isArray(
+        res?.data?.data
+      )
+        ? res.data.data
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+
+      const normalizedCourses =
+        rawCourses.map(normalizeCourse);
+
+      setCourses(normalizedCourses);
     } catch (err) {
-      setError(err?.response?.data?.message || 'Unable to load courses right now.');
+      console.error(
+        'Failed to load courses:',
+        err
+      );
+
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          'Unable to load courses right now.'
+      );
     } finally {
       setLoading(false);
     }
@@ -45,198 +228,777 @@ export default function Courses() {
     loadCourses();
   }, []);
 
+  /*
+   * Reset pagination whenever the user changes
+   * search/filter/sort.
+   */
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [query, category, level, sort]);
+
   const toggleWishlist = (e, id) => {
     e.stopPropagation();
-    setWishlist(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+
+    setWishlist((previous) => {
+      const next = new Set(previous);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
       return next;
     });
   };
 
-  const continueLearning = useMemo(
-    () => courses.filter(c => c.progress > 0 && c.progress < 100).sort((a, b) => b.progress - a.progress).slice(0, 4),
-    [courses]
-  );
+  /*
+   * Courses currently being continued.
+   */
+  const continueLearning = useMemo(() => {
+    return courses
+      .filter(
+        (course) =>
+          course.progress > 0 &&
+          course.progress < 100
+      )
+      .sort(
+        (a, b) =>
+          b.progress - a.progress
+      )
+      .slice(0, 4);
+  }, [courses]);
 
+  /*
+   * Filtering + sorting.
+   */
   const filtered = useMemo(() => {
-    let list = courses.filter(c => {
-      const title = String(c.title || '').toLowerCase();
-      const instructor = String(c.instructor || '').toLowerCase();
-      const matchesQuery = title.includes(query.toLowerCase()) || instructor.includes(query.toLowerCase());
-      const matchesCategory = category === 'All' || c.category === category;
-      const matchesLevel = level === 'All Levels' || c.level === level;
-      return matchesQuery && matchesCategory && matchesLevel;
+    let list = courses.filter((course) => {
+      const title = String(
+        course.title || ''
+      ).toLowerCase();
+
+      const instructor = String(
+        course.instructor || ''
+      ).toLowerCase();
+
+      const courseCategory = String(
+        course.category || ''
+      ).toLowerCase();
+
+      const searchText =
+        query.toLowerCase();
+
+      const matchesQuery =
+        title.includes(searchText) ||
+        instructor.includes(searchText) ||
+        courseCategory.includes(searchText);
+
+      /*
+       * The imported Udemy dataset contains
+       * subjects such as "Web Development",
+       * "Business Finance", etc.
+       *
+       * Keep "All" unrestricted and provide
+       * useful broad category matching.
+       */
+      let matchesCategory = true;
+
+      if (category !== 'All') {
+        const categoryText =
+          courseCategory;
+
+        if (category === 'Programming') {
+          matchesCategory =
+            categoryText.includes(
+              'program'
+            ) ||
+            categoryText.includes(
+              'development'
+            ) ||
+            categoryText.includes(
+              'software'
+            ) ||
+            categoryText.includes(
+              'web'
+            ) ||
+            categoryText.includes(
+              'code'
+            ) ||
+            categoryText.includes(
+              'computer'
+            );
+        } else if (
+          category === 'Data Science'
+        ) {
+          matchesCategory =
+            categoryText.includes(
+              'data'
+            ) ||
+            categoryText.includes(
+              'machine'
+            ) ||
+            categoryText.includes(
+              'statistics'
+            ) ||
+            categoryText.includes(
+              'analytics'
+            );
+        } else if (
+          category === 'Design'
+        ) {
+          matchesCategory =
+            categoryText.includes(
+              'design'
+            ) ||
+            categoryText.includes(
+              'graphic'
+            ) ||
+            categoryText.includes(
+              'ui'
+            ) ||
+            categoryText.includes(
+              'ux'
+            );
+        } else if (
+          category === 'Productivity'
+        ) {
+          matchesCategory =
+            categoryText.includes(
+              'productivity'
+            ) ||
+            categoryText.includes(
+              'office'
+            ) ||
+            categoryText.includes(
+              'business'
+            );
+        }
+      }
+
+      const matchesLevel =
+        level === 'All Levels' ||
+        course.level === level;
+
+      return (
+        matchesQuery &&
+        matchesCategory &&
+        matchesLevel
+      );
     });
-    if (sort === 'progress') list = [...list].sort((a, b) => b.progress - a.progress);
-    if (sort === 'rating') list = [...list].sort((a, b) => b.rating - a.rating);
-    if (sort === 'students') list = [...list].sort((a, b) => b.students - a.students);
+
+    if (sort === 'progress') {
+      list = [...list].sort(
+        (a, b) =>
+          b.progress - a.progress
+      );
+    }
+
+    if (sort === 'rating') {
+      list = [...list].sort(
+        (a, b) =>
+          b.rating - a.rating
+      );
+    }
+
+    if (sort === 'students') {
+      list = [...list].sort(
+        (a, b) =>
+          b.students - a.students
+      );
+    }
+
     return list;
-  }, [category, courses, level, query, sort]);
+  }, [
+    category,
+    courses,
+    level,
+    query,
+    sort,
+  ]);
 
-  const completedCount = courses.filter(c => c.progress === 100).length;
+  /*
+   * Only render a small number of cards at once.
+   */
+  const visibleCourses = useMemo(() => {
+    return filtered.slice(
+      0,
+      visibleCount
+    );
+  }, [filtered, visibleCount]);
 
-  if (loading) return <PageState title="Loading courses" message="Fetching your latest course catalog…" />;
-  if (error) return <PageState type="error" title="Unable to load courses" message={error} onRetry={loadCourses} />;
-  if (!courses.length) return <PageState type="empty" title="No courses yet" message="Your course catalog is empty right now." />;
+  const completedCount =
+    courses.filter(
+      (course) =>
+        course.progress === 100
+    ).length;
+
+  const hasMore =
+    visibleCount < filtered.length;
+
+  if (loading) {
+    return (
+      <PageState
+        title="Loading courses"
+        message="Fetching your latest course catalog…"
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <PageState
+        type="error"
+        title="Unable to load courses"
+        message={error}
+        onRetry={loadCourses}
+      />
+    );
+  }
+
+  if (!courses.length) {
+    return (
+      <PageState
+        type="empty"
+        title="No courses yet"
+        message="Your course catalog is empty right now."
+      />
+    );
+  }
 
   return (
     <div className="animate-fade-in">
+
+      {/* =========================
+          PAGE HEADER
+      ========================== */}
+
       <div className="page-header">
+
         <div>
-          <h1>Course Marketplace</h1>
-          <p>{courses.length} courses across {categories.length - 1} tracks • pick up where you left off</p>
+          <h1>
+            Course Marketplace
+          </h1>
+
+          <p>
+            {courses.length.toLocaleString()}{' '}
+            courses across multiple tracks
+            • pick up where you left off
+          </p>
         </div>
+
         <div className="courses-hero-stats">
+
           <div className="courses-hero-stat">
-            <strong>{courses.length}</strong>
-            <span>Enrolled</span>
+            <strong>
+              {courses.length.toLocaleString()}
+            </strong>
+            <span>Courses</span>
           </div>
+
           <div className="courses-hero-stat">
-            <strong>{completedCount}</strong>
+            <strong>
+              {completedCount}
+            </strong>
             <span>Completed</span>
           </div>
+
           <div className="courses-hero-stat">
-            <strong>{wishlist.size}</strong>
+            <strong>
+              {wishlist.size}
+            </strong>
             <span>Wishlisted</span>
           </div>
+
         </div>
+
       </div>
+
+      {/* =========================
+          CONTINUE LEARNING
+      ========================== */}
 
       {continueLearning.length > 0 && (
         <div className="continue-strip-section">
-          <h3 className="section-title">🌸 Continue Learning</h3>
+
+          <h3 className="section-title">
+            🌸 Continue Learning
+          </h3>
+
           <div className="continue-strip">
-            {continueLearning.map(course => (
-              <GlassCard
-                key={course._id || course.id}
-                hoverable
-                compact
-                className="continue-card"
-                onClick={() => navigate(`/courses/${course._id || course.id}`)}
-              >
-                <ProgressRing value={course.progress || 0} size={52} strokeWidth={5} color={course.color} />
-                <div className="continue-card-info">
-                  <h5 className="line-clamp-2">{course.title}</h5>
-                  <span>Next: {course.nextLesson || 'Continue where you left off'}</span>
-                </div>
-                <PlayCircle size={18} style={{ color: course.color, flexShrink: 0 }} />
-              </GlassCard>
-            ))}
+
+            {continueLearning.map(
+              (course) => {
+
+                const courseId =
+                  course._id ||
+                  course.id;
+
+                return (
+                  <GlassCard
+                    key={courseId}
+                    hoverable
+                    compact
+                    className="continue-card"
+                    onClick={() =>
+                      navigate(
+                        `/courses/${courseId}`
+                      )
+                    }
+                  >
+
+                    <ProgressRing
+                      value={
+                        course.progress || 0
+                      }
+                      size={52}
+                      strokeWidth={5}
+                      color={course.color}
+                    />
+
+                    <div className="continue-card-info">
+
+                      <h5 className="line-clamp-2">
+                        {course.title}
+                      </h5>
+
+                      <span>
+                        Next:{' '}
+                        {course.nextLesson ||
+                          'Continue where you left off'}
+                      </span>
+
+                    </div>
+
+                    <PlayCircle
+                      size={18}
+                      style={{
+                        color:
+                          course.color,
+                        flexShrink: 0,
+                      }}
+                    />
+
+                  </GlassCard>
+                );
+              }
+            )}
+
           </div>
+
         </div>
       )}
 
+      {/* =========================
+          SEARCH + SORT
+      ========================== */}
+
       <div className="courses-toolbar">
-        <SearchBar placeholder="Search courses or instructors..." value={query} onChange={setQuery} />
-        <select className="sort-select" value={sort} onChange={e => setSort(e.target.value)}>
-          {sortOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
+
+        <SearchBar
+          placeholder="Search courses or instructors..."
+          value={query}
+          onChange={setQuery}
+        />
+
+        <select
+          className="sort-select"
+          value={sort}
+          onChange={(e) =>
+            setSort(e.target.value)
+          }
+        >
+          {sortOptions.map((option) => (
+            <option
+              key={option.id}
+              value={option.id}
+            >
+              {option.label}
+            </option>
+          ))}
         </select>
+
       </div>
 
+      {/* =========================
+          FILTERS
+      ========================== */}
+
       <div className="filter-row">
+
         <div className="category-chips">
-          {categories.map(cat => (
+
+          {categories.map((cat) => (
             <span
               key={cat}
-              className={`chip ${category === cat ? 'active' : ''}`}
-              onClick={() => setCategory(cat)}
+              className={`chip ${
+                category === cat
+                  ? 'active'
+                  : ''
+              }`}
+              onClick={() =>
+                setCategory(cat)
+              }
             >
               {cat}
             </span>
           ))}
+
         </div>
+
         <div className="category-chips">
-          {levels.map(lvl => (
+
+          {levels.map((item) => (
             <span
-              key={lvl}
-              className={`chip ${level === lvl ? 'active' : ''}`}
-              onClick={() => setLevel(lvl)}
+              key={item}
+              className={`chip ${
+                level === item
+                  ? 'active'
+                  : ''
+              }`}
+              onClick={() =>
+                setLevel(item)
+              }
             >
-              {lvl}
+              {item}
             </span>
           ))}
+
         </div>
+
       </div>
+
+      {/* =========================
+          RESULT COUNT
+      ========================== */}
+
+      <div
+        style={{
+          marginBottom:
+            'var(--space-4)',
+          color:
+            'var(--text-tertiary)',
+          fontSize:
+            'var(--font-size-sm)',
+        }}
+      >
+        Showing{' '}
+        {Math.min(
+          visibleCount,
+          filtered.length
+        ).toLocaleString()}{' '}
+        of{' '}
+        {filtered.length.toLocaleString()}{' '}
+        matching courses
+      </div>
+
+      {/* =========================
+          COURSE GRID
+      ========================== */}
 
       <div className="courses-grid">
-        {filtered.map((course, i) => {
-          const courseId = course._id || course.id;
-          const isWishlisted = wishlist.has(courseId);
-          return (
-            <GlassCard
-              key={courseId}
-              hoverable
-              noPadding
-              className={`course-card animate-fade-in-up stagger-${(i % 8) + 1}`}
-              onClick={() => navigate(`/courses/${courseId}`)}
-            >
-              <div className="course-card-thumb" style={{ background: `linear-gradient(145deg, ${course.color}2e, ${course.color}0a)` }}>
-                <span className="course-card-emoji">{course.thumbnail || '📘'}</span>
-                <span className="level-badge" style={{ color: getLevelColor(course.level), background: `${getLevelColor(course.level)}1f` }}>
-                  {course.level || 'Beginner'}
-                </span>
-                <button
-                  className={`wishlist-btn ${isWishlisted ? 'active' : ''}`}
-                  onClick={e => toggleWishlist(e, courseId)}
-                  aria-label="Toggle wishlist"
+
+        {visibleCourses.map(
+          (course, index) => {
+
+            const courseId =
+              course._id ||
+              course.id;
+
+            const isWishlisted =
+              wishlist.has(courseId);
+
+            return (
+              <GlassCard
+                key={courseId}
+                hoverable
+                noPadding
+                className={`course-card animate-fade-in-up stagger-${
+                  (index % 8) + 1
+                }`}
+                onClick={() =>
+                  navigate(
+                    `/courses/${courseId}`
+                  )
+                }
+              >
+
+                {/* Course thumbnail */}
+                <div
+                  className="course-card-thumb"
+                  style={{
+                    background: `linear-gradient(
+                      145deg,
+                      ${course.color}2e,
+                      ${course.color}0a
+                    )`,
+                  }}
                 >
-                  <Heart size={14} fill={isWishlisted ? 'currentColor' : 'none'} />
-                </button>
-                {(course.progress || 0) > 0 && (
-                  <div className="course-card-ring">
-                    <ProgressRing value={course.progress || 0} size={44} strokeWidth={4} color={course.color} />
-                  </div>
-                )}
-              </div>
 
-              <div className="course-card-body">
-                <span className="course-card-category">{course.category || 'Programming'}</span>
-                <h3 className="line-clamp-2">{course.title}</h3>
-                <div className="course-card-instructor">
-                  <span className="course-card-avatar" style={{ background: course.color }}>
-                    {String(course.instructor || 'Study Buddy').split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  <span className="course-card-emoji">
+                    {course.thumbnail}
                   </span>
-                  {course.instructor || 'Study Buddy'}
-                </div>
 
-                <div className="course-card-stats">
-                  <span><Star size={12} fill="currentColor" /> {course.rating ?? '4.8'}</span>
-                  <span><Users size={12} /> {Number(course.students ?? 0).toLocaleString()}</span>
-                  <span><Clock size={12} /> {course.duration || '4 weeks'}</span>
-                </div>
+                  <span
+                    className="level-badge"
+                    style={{
+                      color:
+                        getLevelColor(
+                          course.level
+                        ),
+                      background: `${getLevelColor(
+                        course.level
+                      )}1f`,
+                    }}
+                  >
+                    {course.level}
+                  </span>
 
-                <div className="course-card-skills">
-                  {(course.skills ?? []).slice(0, 2).map(skill => (
-                    <span key={skill} className="skill-tag">{skill}</span>
-                  ))}
-                </div>
+                  <button
+                    className={`wishlist-btn ${
+                      isWishlisted
+                        ? 'active'
+                        : ''
+                    }`}
+                    onClick={(e) =>
+                      toggleWishlist(
+                        e,
+                        courseId
+                      )
+                    }
+                    aria-label="Toggle wishlist"
+                  >
+                    <Heart
+                      size={14}
+                      fill={
+                        isWishlisted
+                          ? 'currentColor'
+                          : 'none'
+                      }
+                    />
+                  </button>
 
-                <div className="course-card-footer">
-                  <span><BookOpen size={13} /> {course.completedLessons ?? 0}/{course.totalLessons ?? 0} lessons</span>
-                  {course.certificate && (
-                    <span className="cert-pill"><Award size={13} /> Certificate</span>
+                  {course.progress > 0 && (
+                    <div className="course-card-ring">
+
+                      <ProgressRing
+                        value={
+                          course.progress
+                        }
+                        size={44}
+                        strokeWidth={4}
+                        color={
+                          course.color
+                        }
+                      />
+
+                    </div>
                   )}
+
                 </div>
 
-                <button className="course-card-cta" style={{ background: course.color }}>
-                  {(course.progress || 0) > 0 ? 'Continue Learning' : 'Start Course'}
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            </GlassCard>
-          );
-        })}
+                {/* Course body */}
+                <div className="course-card-body">
 
+                  <span className="course-card-category">
+                    {course.category}
+                  </span>
+
+                  <h3 className="line-clamp-2">
+                    {course.title}
+                  </h3>
+
+                  {/* Instructor */}
+                  <div className="course-card-instructor">
+
+                    <span
+                      className="course-card-avatar"
+                      style={{
+                        background:
+                          course.color,
+                      }}
+                    >
+                      {String(
+                        course.instructor ||
+                          'Study Buddy'
+                      )
+                        .split(' ')
+                        .map(
+                          (name) =>
+                            name[0]
+                        )
+                        .join('')
+                        .slice(0, 2)}
+                    </span>
+
+                    {course.instructor}
+
+                  </div>
+
+                  {/* Stats */}
+                  <div className="course-card-stats">
+
+                    <span>
+                      <Star
+                        size={12}
+                        fill="currentColor"
+                      />
+                      {course.rating ||
+                        '4.8'}
+                    </span>
+
+                    <span>
+                      <Users size={12} />
+                      {Number(
+                        course.students
+                      ).toLocaleString()}
+                    </span>
+
+                    <span>
+                      <Clock size={12} />
+                      {course.duration}
+                    </span>
+
+                  </div>
+
+                  {/* Skills */}
+                  <div className="course-card-skills">
+
+                    {course.skills
+                      .slice(0, 2)
+                      .map(
+                        (
+                          skill,
+                          skillIndex
+                        ) => (
+                          <span
+                            key={`${skill}-${skillIndex}`}
+                            className="skill-tag"
+                          >
+                            {skill}
+                          </span>
+                        )
+                      )}
+
+                  </div>
+
+                  {/* Footer */}
+                  <div className="course-card-footer">
+
+                    <span>
+                      <BookOpen size={13} />
+
+                      {course.completedLessons}
+                      /
+                      {course.totalLessons}{' '}
+                      lessons
+                    </span>
+
+                    {course.certificate && (
+                      <span className="cert-pill">
+
+                        <Award size={13} />
+
+                        Certificate
+
+                      </span>
+                    )}
+
+                  </div>
+
+                  {/* CTA */}
+                  <button
+                    className="course-card-cta"
+                    style={{
+                      background:
+                        course.color,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+
+                      navigate(
+                        `/courses/${courseId}`
+                      );
+                    }}
+                  >
+
+                    {course.progress > 0
+                      ? 'Continue Learning'
+                      : 'Start Course'}
+
+                    <ArrowRight
+                      size={14}
+                    />
+
+                  </button>
+
+                </div>
+
+              </GlassCard>
+            );
+          }
+        )}
+
+        {/* No results */}
         {filtered.length === 0 && (
-          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-            <div className="empty-state-icon">🌸</div>
-            <h3>No courses found</h3>
-            <p>Try a different search term, category, or level.</p>
+          <div
+            className="empty-state"
+            style={{
+              gridColumn: '1 / -1',
+            }}
+          >
+
+            <div className="empty-state-icon">
+              🌸
+            </div>
+
+            <h3>
+              No courses found
+            </h3>
+
+            <p>
+              Try a different search
+              term, category, or level.
+            </p>
+
           </div>
         )}
+
       </div>
+
+      {/* =========================
+          LOAD MORE
+      ========================== */}
+
+      {hasMore && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent:
+              'center',
+            marginTop:
+              'var(--space-8)',
+            marginBottom:
+              'var(--space-8)',
+          }}
+        >
+
+          <button
+            className="hero-btn hero-btn-primary"
+            onClick={() =>
+              setVisibleCount(
+                (count) =>
+                  count + 24
+              )
+            }
+          >
+            Load More Courses
+            <ArrowRight size={16} />
+          </button>
+
+        </div>
+      )}
+
     </div>
   );
 }

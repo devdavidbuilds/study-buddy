@@ -477,3 +477,80 @@
     padding: var(--space-3);
   }
 }
+
+/* ========================================
+   SAKURA NIGHT — Layout Dark Overrides
+   ======================================== */
+
+/* Sidebar */
+[data-theme="dark"] .sidebar {
+  background: var(--bg-surface);
+  border-right-color: var(--border-color);
+}
+
+[data-theme="dark"] .sidebar-header {
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .sidebar-toggle {
+  background: var(--bg-surface);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .sidebar-toggle:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .sidebar-footer {
+  border-top-color: var(--border-color);
+}
+
+[data-theme="dark"] .nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .sidebar-user:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Topbar */
+[data-theme="dark"] .topbar {
+  background: rgba(14, 11, 20, 0.85);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .topbar-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .notification-dot {
+  border-color: var(--bg-primary);
+}
+
+/* Bottom nav */
+[data-theme="dark"] .bottom-nav {
+  background: rgba(22, 18, 33, 0.92);
+  border-top-color: var(--border-color);
+}
+
+/* App content */
+[data-theme="dark"] .app-content {
+  background: var(--bg-primary);
+}
+
+/* Sidebar overlay */
+[data-theme="dark"] .sidebar-overlay {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+/* Petals — dark mode: white/pale-pink with subtle glow */
+[data-theme="dark"] .petal svg path {
+  fill: rgba(255, 255, 255, 0.7);
+}
+[data-theme="dark"] .petal:nth-child(even) svg path {
+  fill: rgba(244, 179, 206, 0.6);
+}
+[data-theme="dark"] .petal {
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.15));
+}

@@ -1,0 +1,140 @@
+/* ========================================
+   FACULTY DASHBOARD STYLES
+   ======================================== */
+.faculty-dashboard {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: var(--space-8);
+  position: relative;
+}
+
+.faculty-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-10);
+}
+
+.faculty-header-left h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-2);
+}
+
+.faculty-header-left p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-md);
+}
+
+.faculty-header-left .faculty-name {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.faculty-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.faculty-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.faculty-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-6);
+}
+
+.faculty-action-card {
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.faculty-action-card:hover {
+  transform: translateY(-4px);
+}
+
+.faculty-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.faculty-card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+.faculty-card-icon.courses {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.faculty-card-icon.manage-courses {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.faculty-card-icon.assignments {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.faculty-card-icon.manage-assignments {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.faculty-card-text h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-1);
+}
+
+.faculty-card-text p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+.faculty-card-arrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 768px) {
+  .faculty-dashboard {
+    padding: var(--space-4);
+  }
+
+  .faculty-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .faculty-grid {
+    grid-template-columns: 1fr;
+  }
+}

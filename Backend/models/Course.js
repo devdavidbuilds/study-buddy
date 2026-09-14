@@ -1,5 +1,86 @@
 const mongoose = require("mongoose");
 
+const lessonSchema = new mongoose.Schema(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    duration: {
+      type: String,
+      default: "30 min",
+    },
+    done: {
+      type: Boolean,
+      default: false,
+    },
+    codeFile: {
+      type: String,
+      default: "",
+    },
+    description: {
+      type: String,
+      default: "",
+    },
+    content: {
+      type: String,
+      default: "",
+    },
+    videoUrl: {
+      type: String,
+      default: "",
+    },
+    resources: {
+      type: [String],
+      default: [],
+    },
+    quiz: {
+      type: [
+        {
+          question: {
+            type: String,
+            default: "",
+          },
+          options: {
+            type: [String],
+            default: [],
+          },
+          answer: {
+            type: String,
+            default: "",
+          },
+        },
+      ],
+      default: [],
+    },
+  },
+  { _id: false }
+);
+
+const moduleSchema = new mongoose.Schema(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    lessons: {
+      type: [lessonSchema],
+      default: [],
+    },
+  },
+  { _id: false }
+);
+
 const courseSchema = new mongoose.Schema(
   {
     courseName: {
@@ -39,7 +120,67 @@ const courseSchema = new mongoose.Schema(
 
     thumbnail: {
       type: String,
-      default: "",
+      default: "📘",
+    },
+
+    category: {
+      type: String,
+      default: "Programming",
+    },
+
+    level: {
+      type: String,
+      enum: ["Beginner", "Intermediate", "Advanced"],
+      default: "Beginner",
+    },
+
+    duration: {
+      type: String,
+      default: "4 weeks",
+    },
+
+    color: {
+      type: String,
+      default: "#E75480",
+    },
+
+    skills: {
+      type: [String],
+      default: [],
+    },
+
+    outcomes: {
+      type: [String],
+      default: [],
+    },
+
+    modules: {
+      type: [moduleSchema],
+      default: [],
+    },
+
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+
+    students: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    reviewsCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    certificate: {
+      type: Boolean,
+      default: true,
     },
 
     faculty: {
