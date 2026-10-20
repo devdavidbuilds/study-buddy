@@ -16,7 +16,7 @@ import {
   Hash,
   RefreshCw,
 } from 'lucide-react';
-import { getCourses, getCourse } from '../../api/courseApi';
+import { getCourses, getCourse, getMyFacultyCourses } from '../../api/courseApi';
 import { createAssignment } from '../../api/assignmentApi';
 import { profile } from '../../api/authApi';
 import './FacultyCreateAssignment.css';
@@ -57,13 +57,18 @@ export default function FacultyCreateAssignment({ onBack }) {
       const user = profileRes?.data?.user;
       if (!user?._id) return;
 
-      const coursesRes = await getCourses({ limit: 200 });
-      const allCourses = coursesRes?.data?.data || [];
-      const myCourses = allCourses.filter((c) => {
-        const fid = c.faculty?._id || c.faculty;
-        return fid === user._id;
-      });
-      setCourses(myCourses);
+      try {
+        const myCoursesRes = await getMyFacultyCourses();
+        setCourses(myCoursesRes?.data?.data || []);
+      } catch {
+        const coursesRes = await getCourses({ faculty: user._id, limit: 100 });
+        const allCourses = coursesRes?.data?.data || [];
+        const myCourses = allCourses.filter((c) => {
+          const fid = c.faculty?._id || c.faculty;
+          return String(fid) === String(user._id);
+        });
+        setCourses(myCourses);
+      }
     } catch (err) {
       console.error('Failed to fetch courses:', err);
     } finally {

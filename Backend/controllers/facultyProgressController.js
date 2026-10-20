@@ -110,6 +110,7 @@ const getCourseProgressOverview = async (req, res) => {
     if (!course) return; // response already sent
 
     const totalLessons = countTotalLessons(course);
+    const validLessonKeys = new Set(buildLessonTitleMap(course).keys());
 
     const [progressDocs, assignments, quizzes, activities] = await Promise.all([
       CourseProgress.find({ course: course._id })
@@ -158,10 +159,17 @@ const getCourseProgressOverview = async (req, res) => {
       if (!progress.user) continue; // orphaned record (deleted user) — skip
       const entry = ensureStudent(progress.user._id, progress.user);
       entry.hasProgressRecord = true;
-      entry.completedLessonsCount = (progress.completedLessons || []).length;
+      // Only count completions for lessons that still exist in the course.
+      entry.completedLessonsCount = new Set(
+        (progress.completedLessons || [])
+          .map((l) => `${l.moduleId}::${l.lessonId}`)
+          .filter((key) => validLessonKeys.has(key))
+      ).size;
 
       for (const a of progress.assignments || []) {
-        if (a.status === "Submitted" || a.status === "Evaluated") {
+        // "Returned" = sent back to the student: submitted, but neither
+        // graded nor waiting on faculty.
+        if (a.status === "Submitted" || a.status === "Evaluated" || a.status === "Returned") {
           entry.assignmentsSubmitted += 1;
         }
         if (a.status === "Evaluated") {
@@ -456,7 +464,11 @@ const getStudentProgressDetail = async (req, res) => {
       completedAt: l.completedAt,
     }));
 
-    const completedLessonsCount = completedLessons.length;
+    const completedLessonsCount = new Set(
+      completedLessons
+        .filter((l) => lessonKeyTitle.has(`${l.moduleId}::${l.lessonId}`))
+        .map((l) => `${l.moduleId}::${l.lessonId}`)
+    ).size;
     const percentage =
       totalLessons > 0
         ? Math.round((completedLessonsCount / totalLessons) * 100)
@@ -476,12 +488,14 @@ const getStudentProgressDetail = async (req, res) => {
     }));
 
     const assignmentsSubmitted = assignmentEntries.filter(
-      (a) => a.status === "Submitted" || a.status === "Evaluated"
+      (a) => a.status === "Submitted" || a.status === "Evaluated" || a.status === "Returned"
     ).length;
     const assignmentsEvaluated = assignmentEntries.filter(
       (a) => a.status === "Evaluated"
     ).length;
-    const assignmentsPending = assignmentsSubmitted - assignmentsEvaluated;
+    const assignmentsPending = assignmentEntries.filter(
+      (a) => a.status === "Submitted"
+    ).length;
 
     const quizTitleById = new Map(
       quizzes.map((quiz) => [String(quiz._id), quiz.title])

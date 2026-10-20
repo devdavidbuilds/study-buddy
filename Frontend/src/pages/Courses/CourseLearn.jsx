@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -35,20 +35,32 @@ import {
   EmbeddedQuiz,
   ResourcesList,
 } from '../../components/course/InteractiveLearningElements';
+import {
+  LessonObjectives,
+  WorkedExamples,
+  RealWorldApplications,
+  MistakesAndTips,
+  TakeawaysAndRevision,
+  PracticeActivities,
+} from '../../components/course/StructuredLessonSections';
 
 import { getCourse } from '../../api/courseApi';
 import {
   getCourseProgress,
   markLessonComplete,
   submitAssignment,
+  submitLessonCheck,
 } from '../../api/progressApi';
 import { getAssignmentsForLesson } from '../../api/assignmentApi';
+import PdfUploadField from '../../components/assignment/PdfUploadField';
 import { getQuizzesForLesson, submitQuiz } from '../../api/quizApi';
 import { logLessonOpened } from '../../api/activityApi';
 import {
   buildAssignment,
   getKeyConcepts,
   getLessonObjective,
+  getLessonMinutes,
+  formatMinutes,
 } from '../../utils/lessonAssignment';
 import { generateInitials } from '../../utils/helpers';
 
@@ -95,6 +107,8 @@ export default function CourseLearn() {
 
   // ---- assignment state ----
   const [answer, setAnswer] = useState('');
+  const [pdfFile, setPdfFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
@@ -222,17 +236,46 @@ export default function CourseLearn() {
     );
   }, [flattenedLessons, activeEntry]);
 
+  // A lesson can have both a faculty assignment and the legacy lesson
+  // prompt; match the entry for whichever one is shown.
   const currentAssignmentEntry = useMemo(() => {
     if (!activeEntry) return null;
 
     return (
-      (progress?.assignments || []).find(
-        (a) =>
-          a.moduleId === activeEntry.moduleId &&
-          a.lessonId === activeEntry.lesson?.id
+      (progress?.assignments || []).find((a) =>
+        realAssignment
+          ? String(a.assignmentId) === String(realAssignment._id)
+          : !a.assignmentId &&
+            a.moduleId === activeEntry.moduleId &&
+            a.lessonId === activeEntry.lesson?.id
+      ) || null
+    );
+  }, [progress, activeEntry, realAssignment]);
+
+  const lessonCheckEntry = useMemo(() => {
+    if (!activeEntry) return null;
+
+    return (
+      (progress?.lessonChecks || []).find(
+        (entry) =>
+          entry.moduleId === activeEntry.moduleId &&
+          entry.lessonId === activeEntry.lesson?.id
       ) || null
     );
   }, [progress, activeEntry]);
+
+  // Estimated study time (from lesson.estimatedMinutes, falling back to
+  // the lesson's duration label). No timers — display only.
+  const timeSummary = useMemo(() => {
+    let total = 0;
+    let remaining = 0;
+    flattenedLessons.forEach((entry) => {
+      const minutes = getLessonMinutes(entry.lesson);
+      total += minutes;
+      if (!completedSet.has(`${entry.moduleId}::${entry.lesson?.id}`)) remaining += minutes;
+    });
+    return { total, remaining };
+  }, [flattenedLessons, completedSet]);
 
   // ==============================
   // Side effects
@@ -242,6 +285,8 @@ export default function CourseLearn() {
   useEffect(() => {
     setAnswer(currentAssignmentEntry?.answer || '');
     setActionMessage('');
+    setPdfFile(null);
+    setUploadProgress(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEntry?.moduleId, activeEntry?.lesson?.id]);
 
@@ -356,7 +401,12 @@ export default function CourseLearn() {
 
   const isSubmitted =
     currentAssignmentEntry?.status === 'Submitted' ||
-    currentAssignmentEntry?.status === 'Evaluated';
+    currentAssignmentEntry?.status === 'Evaluated' ||
+    currentAssignmentEntry?.status === 'Returned';
+  // Evaluated work is final unless faculty return it ("Returned").
+  const isEvaluated = currentAssignmentEntry?.status === 'Evaluated';
+  const isReturned = currentAssignmentEntry?.status === 'Returned';
+  const statusBadgeClass = isReturned ? 'badge-danger' : isSubmitted ? 'badge-success' : 'badge-ghost';
 
   const assignment = useMemo(() => {
     if (!course || !activeEntry) return null;
@@ -374,6 +424,23 @@ export default function CourseLearn() {
   );
 
   const progressPercentage = progress?.percentage ?? 0;
+
+  // Structured lessons are completed after their lesson check (and the
+  // faculty assignment, if one exists); legacy lessons keep the original
+  // "submit the assignment first" rule.
+  const structuredLesson = Boolean(activeEntry?.lesson?.learning?.explanation);
+  const hasLessonCheck = structuredLesson && (activeEntry?.lesson?.quiz?.length || 0) > 0;
+  const showAssignmentCard = !structuredLesson || Boolean(realAssignment) || loadingRealAssignment;
+  const completionRequirementMet = structuredLesson
+    ? (!hasLessonCheck || Boolean(lessonCheckEntry)) && (!realAssignment || isSubmitted)
+    : isSubmitted;
+  const completionHint = structuredLesson
+    ? hasLessonCheck && !lessonCheckEntry
+      ? 'Complete the lesson check above to unlock lesson completion.'
+      : realAssignment && !isSubmitted
+      ? 'Submit the assignment above to unlock lesson completion.'
+      : ''
+    : 'Submit the assignment above before marking this lesson complete.';
 
   // ==============================
   // Handlers
@@ -393,6 +460,14 @@ export default function CourseLearn() {
   const questionsUnanswered = realAssignment
     ? questionAnswers.length !== (realAssignment.questions?.length || 0) ||
       questionAnswers.some((a) => !a.trim())
+    : false;
+
+  // A PDF (newly chosen or already submitted) can stand in for typed answers.
+  const hasPdf = Boolean(pdfFile || currentAssignmentEntry?.file);
+  const realAssignmentIncomplete = realAssignment
+    ? (realAssignment.questions?.length
+        ? questionsUnanswered
+        : !questionAnswers.some((a) => a.trim())) && !hasPdf
     : false;
 
   const handleQuestionAnswerChange = (index, value) => {
@@ -432,18 +507,37 @@ export default function CourseLearn() {
     }
   };
 
+  const handleSubmitLessonCheck = async (answers) => {
+    const res = await submitLessonCheck(id, {
+      moduleId: activeEntry.moduleId,
+      lessonId: activeEntry.lesson.id,
+      answers,
+    });
+    const data = res?.data?.data;
+
+    setProgress((prev) => {
+      const checks = (prev?.lessonChecks || []).filter(
+        (entry) => !(entry.moduleId === data.moduleId && entry.lessonId === data.lessonId)
+      );
+      return { ...(prev || {}), lessonChecks: [...checks, data] };
+    });
+
+    return data;
+  };
+
   const handleSubmitAssignment = async (event) => {
     event.preventDefault();
     if (!activeEntry) return;
 
     if (realAssignment) {
-      if (questionsUnanswered) return;
-    } else if (!answer.trim()) {
+      if (realAssignmentIncomplete) return;
+    } else if (!answer.trim() && !hasPdf) {
       return;
     }
 
     setSubmitting(true);
     setActionMessage('');
+    if (pdfFile) setUploadProgress(0);
 
     try {
       const payload = realAssignment
@@ -459,23 +553,72 @@ export default function CourseLearn() {
             title: activeEntry.lesson.title,
             answer: answer.trim(),
           };
+      if (pdfFile) payload.file = pdfFile;
 
-      const res = await submitAssignment(id, payload);
+      const res = await submitAssignment(id, payload, {
+        onUploadProgress: setUploadProgress,
+      });
 
       setProgress((prev) => ({
         ...(prev || {}),
         assignments: res?.data?.data?.assignments || prev?.assignments || [],
       }));
+      setPdfFile(null);
 
-      setActionMessage('Assignment submitted. You can now mark this lesson complete.');
+      setActionMessage(
+        structuredLesson && hasLessonCheck && !lessonCheckEntry
+          ? 'Assignment submitted. Complete the lesson check to finish this lesson.'
+          : 'Assignment submitted. You can now mark this lesson complete.'
+      );
     } catch (err) {
       setActionMessage(
         err?.response?.data?.message || 'Could not submit the assignment.'
       );
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   };
+
+  // Status, upload date, PDF, marks and feedback for the current submission.
+  const submissionDetails = isSubmitted && currentAssignmentEntry && (
+    <div className="submission-status-details-wrap">
+      <div className="submission-status-details">
+        {currentAssignmentEntry.submittedAt && (
+          <span>Submitted {new Date(currentAssignmentEntry.submittedAt).toLocaleString()}</span>
+        )}
+        {isEvaluated ? (
+          <span>
+            Score: <strong>{currentAssignmentEntry.marks} / {currentAssignmentEntry.maxMarks}</strong>
+          </span>
+        ) : isReturned ? (
+          <span>Returned for resubmission</span>
+        ) : (
+          <span>Awaiting evaluation</span>
+        )}
+        {(isEvaluated || isReturned) && currentAssignmentEntry.evaluatedAt && (
+          <span>
+            {isReturned ? 'Returned' : 'Evaluated'} {new Date(currentAssignmentEntry.evaluatedAt).toLocaleString()}
+          </span>
+        )}
+      </div>
+      {(isEvaluated || isReturned) && currentAssignmentEntry.feedback && (
+        <p className="submission-feedback">
+          <strong>Faculty feedback:</strong> {currentAssignmentEntry.feedback}
+        </p>
+      )}
+      {isReturned && (
+        <p className="submission-feedback">
+          Update your answers or upload a new PDF, then press Resubmit.
+        </p>
+      )}
+      {isEvaluated && (
+        <p className="submission-feedback">
+          This assignment has been evaluated, so it can no longer be resubmitted unless your faculty returns it.
+        </p>
+      )}
+    </div>
+  );
 
   const handleMarkComplete = async () => {
     if (!activeEntry || isDone) return;
@@ -621,6 +764,11 @@ export default function CourseLearn() {
                 {progressPercentage}%
               </span>
             </div>
+            {timeSummary.total > 0 && (
+              <div className="sl-time-meta">
+                {formatMinutes(timeSummary.total)} total · {formatMinutes(timeSummary.remaining)} left
+              </div>
+            )}
           </div>
 
           {/* Module / Lesson list */}
@@ -775,6 +923,10 @@ export default function CourseLearn() {
                   Lesson {activeIndex + 1} of {flattenedLessons.length}
                 </span>
 
+                {timeSummary.remaining > 0 && (
+                  <span>~{formatMinutes(timeSummary.remaining)} left in course</span>
+                )}
+
                 {isDone && (
                   <span className={`badge badge-success ${completedPulse ? 'learn-completed-pulse' : ''}`}>
                     Completed
@@ -819,12 +971,16 @@ export default function CourseLearn() {
 
             {/* Learning Objective */}
             <div style={{ padding: '0 var(--space-6) var(--space-5)' }}>
-              <div className="learn-objective">
-                <div className="learn-objective-icon">
-                  <Target size={16} />
+              {lesson.learning?.objectives?.length ? (
+                <LessonObjectives objectives={lesson.learning.objectives} />
+              ) : (
+                <div className="learn-objective">
+                  <div className="learn-objective-icon">
+                    <Target size={16} />
+                  </div>
+                  <p>{getLessonObjective(lesson)}</p>
                 </div>
-                <p>{getLessonObjective(lesson)}</p>
-              </div>
+              )}
             </div>
           </GlassCard>
 
@@ -870,9 +1026,35 @@ export default function CourseLearn() {
             </ExpandableSection>
           )}
 
-          {/* ---- Embedded Quiz (from lesson.quiz[]) ---- */}
+          {/* ---- Structured lesson sections (pipeline-generated content) ---- */}
+          {lesson.learning && (
+            <Fragment key={`sections-${activeEntry.moduleId}::${lesson.id}`}>
+              <WorkedExamples examples={lesson.learning.examples} />
+              <RealWorldApplications applications={lesson.learning.applications} />
+              <MistakesAndTips mistakes={lesson.learning.mistakes} tips={lesson.learning.tips} />
+              <TakeawaysAndRevision
+                takeaways={lesson.learning.takeaways}
+                revisionNotes={lesson.learning.revisionNotes}
+              />
+              <PracticeActivities practice={lesson.learning.practice} />
+            </Fragment>
+          )}
+
+          {/* ---- Lesson check (from lesson.quiz[], scored by the server) ---- */}
           {lesson.quiz && lesson.quiz.length > 0 && (
-            <EmbeddedQuiz questions={lesson.quiz} />
+            <EmbeddedQuiz
+              key={`check-${activeEntry.moduleId}::${lesson.id}`}
+              questions={lesson.quiz}
+              onSubmit={handleSubmitLessonCheck}
+              previous={lessonCheckEntry}
+              title={
+                lesson.learning?.kind === 'final-assessment'
+                  ? 'Final Assessment'
+                  : structuredLesson
+                  ? 'Lesson Check'
+                  : 'Quick Check'
+              }
+            />
           )}
 
           {/* ---- Faculty-created lesson quiz ---- */}
@@ -956,6 +1138,7 @@ export default function CourseLearn() {
           )}
 
           {/* ---- Assignment ---- */}
+          {showAssignmentCard && (
           <GlassCard noPadding>
             <div className="learn-assignment-section">
               <h3 className="learn-section-heading">
@@ -1029,31 +1212,30 @@ export default function CourseLearn() {
                       </div>
                     ))}
 
+                    <PdfUploadField
+                      file={pdfFile}
+                      onFileChange={setPdfFile}
+                      progress={uploadProgress}
+                      disabled={submitting || isEvaluated}
+                      existingFile={currentAssignmentEntry?.file || null}
+                    />
+
                     <div className="learn-assignment-actions">
-                      <span
-                        className={`badge ${isSubmitted ? 'badge-success' : 'badge-ghost'}`}
-                      >
+                      <span className={`badge ${statusBadgeClass}`}>
                         {currentAssignmentEntry?.status || 'Not Started'}
                       </span>
 
                       <button
                         type="submit"
                         className="btn btn-primary btn-sm"
-                        disabled={submitting || questionsUnanswered}
+                        disabled={submitting || isEvaluated || realAssignmentIncomplete}
                       >
                         <Send size={14} />
-                        {isSubmitted ? 'Resubmit' : 'Submit'}
+                        {submitting ? 'Submitting…' : isSubmitted ? 'Resubmit' : 'Submit'}
                       </button>
                     </div>
 
-                    {currentAssignmentEntry?.status === 'Evaluated' && (
-                      <p className="learn-action-message" style={{ marginTop: 'var(--space-3)' }}>
-                        Score: {currentAssignmentEntry.marks} / {currentAssignmentEntry.maxMarks}
-                        {currentAssignmentEntry.feedback
-                          ? ` — ${currentAssignmentEntry.feedback}`
-                          : ''}
-                      </p>
-                    )}
+                    {submissionDetails}
                   </form>
                 </>
               ) : (
@@ -1084,27 +1266,36 @@ export default function CourseLearn() {
                       />
                     </div>
 
+                    <PdfUploadField
+                      file={pdfFile}
+                      onFileChange={setPdfFile}
+                      progress={uploadProgress}
+                      disabled={submitting || isEvaluated}
+                      existingFile={currentAssignmentEntry?.file || null}
+                    />
+
                     <div className="learn-assignment-actions">
-                      <span
-                        className={`badge ${isSubmitted ? 'badge-success' : 'badge-ghost'}`}
-                      >
+                      <span className={`badge ${statusBadgeClass}`}>
                         {currentAssignmentEntry?.status || 'Not Started'}
                       </span>
 
                       <button
                         type="submit"
                         className="btn btn-primary btn-sm"
-                        disabled={submitting || !answer.trim()}
+                        disabled={submitting || isEvaluated || (!answer.trim() && !hasPdf)}
                       >
                         <Send size={14} />
-                        {isSubmitted ? 'Resubmit' : 'Submit'}
+                        {submitting ? 'Submitting…' : isSubmitted ? 'Resubmit' : 'Submit'}
                       </button>
                     </div>
+
+                    {submissionDetails}
                   </form>
                 </>
               )}
             </div>
           </GlassCard>
+          )}
 
           {/* ---- Footer — Navigation + Mark Complete ---- */}
           <GlassCard noPadding>
@@ -1134,12 +1325,8 @@ export default function CourseLearn() {
                     type="button"
                     className="btn btn-primary btn-sm"
                     onClick={handleMarkComplete}
-                    disabled={completing || isDone || !isSubmitted}
-                    title={
-                      !isSubmitted
-                        ? 'Submit the assignment above to unlock lesson completion'
-                        : ''
-                    }
+                    disabled={completing || isDone || !completionRequirementMet}
+                    title={!completionRequirementMet ? completionHint : ''}
                   >
                     <CheckCircle2 size={14} />
                     {isDone ? 'Completed' : 'Mark Complete'}
@@ -1158,10 +1345,8 @@ export default function CourseLearn() {
                 </button>
               </div>
 
-              {!isSubmitted && (
-                <p className="learn-hint-text">
-                  Submit the assignment above before marking this lesson complete.
-                </p>
+              {!isDone && !completionRequirementMet && completionHint && (
+                <p className="learn-hint-text">{completionHint}</p>
               )}
             </div>
           </GlassCard>

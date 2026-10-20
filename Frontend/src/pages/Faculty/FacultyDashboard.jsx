@@ -20,10 +20,11 @@ import {
   FileText,
   Zap,
   ClipboardCheck,
+  FolderOpen,
 } from 'lucide-react';
 import SakuraPetals from '../../components/ui/SakuraPetals';
 import { profile } from '../../api/authApi';
-import { getCourses } from '../../api/courseApi';
+import { getCourses, getMyFacultyCourses } from '../../api/courseApi';
 import { setAuthToken } from '../../api/api';
 import FacultyMyCourses from './FacultyMyCourses';
 import FacultyCourseContent from './FacultyCourseContent';
@@ -31,12 +32,14 @@ import FacultyCreateAssignment from './FacultyCreateAssignment';
 import FacultySubmissions from './FacultySubmissions';
 import FacultyQuizGenerator from './FacultyQuizGenerator';
 import FacultyStudentProgress from './FacultyStudentProgress';
+import FacultyLectureMaterials from './FacultyLectureMaterials';
 import './FacultyDashboard.css';
 
 /* ── Sidebar nav items ──────────────────────── */
 const sidebarItems = [
   { key: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { key: 'my-courses', icon: BookOpen, label: 'My Courses' },
+  { key: 'materials', icon: FolderOpen, label: 'Lecture Materials' },
   { key: 'assignments', icon: ClipboardList, label: 'Assignments' },
   { key: 'submissions', icon: ClipboardCheck, label: 'Submissions & Evaluation' },
   { key: 'quiz-generator', icon: Brain, label: 'Quiz Creator' },
@@ -117,13 +120,18 @@ export default function FacultyDashboard() {
           setFacultyName(user.fullName || 'Faculty');
 
           // Fetch courses to populate stat card
-          const coursesRes = await getCourses({ limit: 200 });
-          const allCourses = coursesRes?.data?.data || [];
-          const myCourses = allCourses.filter((c) => {
-            const fid = c.faculty?._id || c.faculty;
-            return fid === user._id;
-          });
-          setCourseCount(myCourses.length);
+          try {
+            const myCoursesRes = await getMyFacultyCourses();
+            setCourseCount(myCoursesRes?.data?.data?.length || 0);
+          } catch {
+            const coursesRes = await getCourses({ faculty: user._id, limit: 100 });
+            const allCourses = coursesRes?.data?.data || [];
+            const myCourses = allCourses.filter((c) => {
+              const fid = c.faculty?._id || c.faculty;
+              return String(fid) === String(user._id);
+            });
+            setCourseCount(myCourses.length);
+          }
         }
       } catch {
         setFacultyName('Faculty');
@@ -211,6 +219,14 @@ export default function FacultyDashboard() {
         <FacultyCourseContent
           courseId={selectedCourseId}
           onBack={() => setActiveNav('my-courses')}
+        />
+      );
+    }
+
+    if (activeNav === 'materials') {
+      return (
+        <FacultyLectureMaterials
+          onBack={() => setActiveNav('dashboard')}
         />
       );
     }

@@ -6,6 +6,7 @@ const {
   getAssignmentsByCourse,
   getMyAssignments,
   getAssignmentsForLesson,
+  getFacultySubmissions,
   getSubmissionsForAssignment,
   evaluateSubmission,
 } = require("../controllers/assignmentController");
@@ -26,6 +27,23 @@ router.get(
   protect,
   authorizeRoles("faculty", "admin"),
   getMyAssignments
+);
+
+// Faculty/Admin: get all student submissions across courses owned by faculty
+router.get(
+  "/faculty/submissions",
+  protect,
+  authorizeRoles("faculty", "admin"),
+  getFacultySubmissions
+);
+
+// Faculty/Admin: general evaluate submission by studentId
+router.put(
+  "/submissions/:studentId/evaluate",
+  protect,
+  authorizeRoles("faculty", "admin"),
+  validateObjectId("studentId"),
+  evaluateSubmission
 );
 
 // Get assignments for a specific course (any authenticated user)

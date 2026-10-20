@@ -420,6 +420,18 @@ const importCourses = async () => {
       return mappedCourse;
     });
 
+    // Re-importing deletes and recreates every imported course with new
+    // _ids, which orphans student progress, quizzes, assignments and any
+    // enriched content (see scripts/enrichCourses.js). Require an explicit
+    // opt-in when imported courses already exist.
+    const existingImported = await Course.countDocuments({ courseCode: { $regex: /^COURSE-/i } });
+    if (existingImported > 0 && !process.argv.includes("--replace-existing")) {
+      throw new Error(
+        `${existingImported} imported courses already exist. Re-importing would replace them (new ids, enriched content lost). ` +
+          "Use `npm run content:enrich` to improve content instead, or pass --replace-existing if you really want to wipe and re-import."
+      );
+    }
+
     await Course.deleteMany({ courseCode: { $regex: /^COURSE-/i } });
     const insertedCourses = await Course.insertMany(mappedCourses);
 

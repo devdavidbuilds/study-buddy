@@ -15,7 +15,7 @@ import {
   GraduationCap,
   Clock,
 } from 'lucide-react';
-import { getCourses } from '../../api/courseApi';
+import { getCourses, getMyFacultyCourses } from '../../api/courseApi';
 import { profile } from '../../api/authApi';
 import './FacultyMyCourses.css';
 
@@ -60,17 +60,18 @@ export default function FacultyMyCourses({ onNavigate }) {
       if (!user?._id) throw new Error('Unable to verify faculty identity');
       setFacultyId(user._id);
 
-      // Fetch all courses (API has pagination, fetch a large page)
-      const coursesRes = await getCourses({ limit: 200 });
-      const allCourses = coursesRes?.data?.data || [];
-
-      // Filter to only this faculty's courses
-      const myCourses = allCourses.filter((c) => {
-        const fid = c.faculty?._id || c.faculty;
-        return fid === user._id;
-      });
-
-      setCourses(myCourses);
+      try {
+        const myCoursesRes = await getMyFacultyCourses();
+        setCourses(myCoursesRes?.data?.data || []);
+      } catch {
+        const coursesRes = await getCourses({ faculty: user._id, limit: 100 });
+        const allCourses = coursesRes?.data?.data || [];
+        const myCourses = allCourses.filter((c) => {
+          const fid = c.faculty?._id || c.faculty;
+          return String(fid) === String(user._id);
+        });
+        setCourses(myCourses);
+      }
     } catch (err) {
       console.error('FacultyMyCourses fetch error:', err);
       setError(err?.response?.data?.message || err.message || 'Failed to load courses');
@@ -116,9 +117,10 @@ export default function FacultyMyCourses({ onNavigate }) {
   }, [courses, searchQuery, statusFilter, levelFilter, departmentFilter]);
 
   /* ── Helpers ─────────────────────── */
-  const countModules = (c) => c.modules?.length || 0;
+  // The my-courses list sends counts instead of full module outlines.
+  const countModules = (c) => c.moduleCount ?? c.modules?.length ?? 0;
   const countLessons = (c) =>
-    (c.modules || []).reduce((sum, m) => sum + (m.lessons?.length || 0), 0);
+    c.lessonCount ?? (c.modules || []).reduce((sum, m) => sum + (m.lessons?.length || 0), 0);
 
   const hasActiveFilters =
     searchQuery || statusFilter !== 'All' || levelFilter !== 'All' || departmentFilter !== 'All';

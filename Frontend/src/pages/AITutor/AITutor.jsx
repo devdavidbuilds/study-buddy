@@ -1,16 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Sparkles, Send, Mic, FileText, HelpCircle, Layers, Code2 } from 'lucide-react';
+import { Sparkles, Send, Mic } from 'lucide-react';
 import useProfile from '../../hooks/useProfile';
 import { getCourse } from '../../api/courseApi';
 import { sendChatbotMessage } from '../../api/chatbotApi';
-
-const tools = [
-  { label: 'Summarize Notes', icon: FileText },
-  { label: 'Generate Quiz', icon: HelpCircle },
-  { label: 'Make Flashcards', icon: Layers },
-  { label: 'Coding Help', icon: Code2 },
-];
+import { sendAiChatMessage } from '../../api/aiChatApi';
+import LessonContentRenderer from '../../components/course/LessonContentRenderer';
 
 export default function AITutor() {
   const { profile } = useProfile();
@@ -19,12 +14,8 @@ export default function AITutor() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [aiSuggestedPrompts] = useState([
-    'Explain recursion like I\'m 12',
-    'What is the difference between stack and queue?',
-    'Write a C++ program to check if a number is prime',
-    'Explain TCP three-way handshake',
-  ]);
+  // 'tutor' = existing /api/chatbot, 'finetuned' = Study Buddy model via /api/ai-chat
+  const [engine, setEngine] = useState('tutor');
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -63,6 +54,15 @@ export default function AITutor() {
     setLoading(true);
 
     try {
+      if (engine === 'finetuned') {
+        // The fine-tuned model only accepts a single message (no history or course context)
+        const response = await sendAiChatMessage({ message: content });
+        const reply = response?.data?.reply;
+        if (!reply) throw new Error('The model returned no answer.');
+        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'ai', text: reply }]);
+        return;
+      }
+
       // Build payload — courseId is optional
       const payload = {
         message: content,
@@ -85,7 +85,9 @@ export default function AITutor() {
       const response = await sendChatbotMessage(payload);
       const reply = response?.data?.data?.answer;
       if (!reply) throw new Error('The tutor returned no answer.');
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'ai', text: reply }]);
+      // Set when the AI model was unavailable and a built-in answer was used.
+      const notice = response?.data?.data?.notice;
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'ai', text: notice ? `${reply}\n\n*${notice}*` : reply }]);
     } catch (error) {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
@@ -115,21 +117,35 @@ export default function AITutor() {
               : 'Ask questions, get explanations, debug code — anytime.'}
           </p>
         </div>
-      </div>
-
-      <div className="ai-tool-row">
-        {tools.map(t => (
-          <button key={t.label} className="chip" onClick={() => send(t.label)}>
-            <t.icon size={13} /> {t.label}
+        <div className="ai-tool-row" style={{ marginBottom: 0 }}>
+          <button
+            className={`chip${engine === 'tutor' ? ' active' : ''}`}
+            onClick={() => setEngine('tutor')}
+            disabled={loading}
+          >
+            AI Tutor
           </button>
-        ))}
+          <button
+            className={`chip${engine === 'finetuned' ? ' active' : ''}`}
+            onClick={() => setEngine('finetuned')}
+            disabled={loading}
+          >
+            Fine-tuned model
+          </button>
+        </div>
       </div>
 
       <div className="ai-chat-window" ref={scrollRef}>
         {messages.map(m => (
           <div key={m.id} className={`ai-message ${m.role} animate-fade-in-up`}>
             <div className="ai-message-avatar">{m.role === 'ai' ? '🌸' : String(profile?.name || 'S')[0]}</div>
-            <div className="ai-message-bubble" style={{ whiteSpace: 'pre-wrap' }}>{m.text}</div>
+            {m.role === 'ai' ? (
+              <div className="ai-message-bubble">
+                <LessonContentRenderer content={m.text} className="ai-markdown" />
+              </div>
+            ) : (
+              <div className="ai-message-bubble" style={{ whiteSpace: 'pre-wrap' }}>{m.text}</div>
+            )}
           </div>
         ))}
         {loading && (
@@ -138,12 +154,6 @@ export default function AITutor() {
             <div className="ai-message-bubble" style={{ color: 'var(--text-tertiary)' }}>Thinking…</div>
           </div>
         )}
-      </div>
-
-      <div className="ai-suggestions">
-        {aiSuggestedPrompts.map(p => (
-          <span key={p} className="chip" onClick={() => send(p)}>{p}</span>
-        ))}
       </div>
 
       <div className="ai-input-bar">

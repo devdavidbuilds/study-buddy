@@ -36,9 +36,11 @@ const assignmentEntrySchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // "Returned" = faculty sent it back for resubmission (feedback explains
+    // why); the student's next submission sets it back to "Submitted".
     status: {
       type: String,
-      enum: ["Not Started", "In Progress", "Submitted", "Evaluated"],
+      enum: ["Not Started", "In Progress", "Submitted", "Evaluated", "Returned"],
       default: "Not Started",
     },
     marks: {
@@ -57,9 +59,35 @@ const assignmentEntrySchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Faculty/admin who last evaluated or returned this submission.
+    evaluatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     feedback: {
       type: String,
       default: "",
+    },
+    // Optional PDF uploaded with the submission. The file lives in private
+    // storage (GridFS or the uploads directory — see utils/submissionFiles)
+    // and is only served through the authenticated
+    // GET /api/submissions/files/:fileId route.
+    file: {
+      type: new mongoose.Schema(
+        {
+          fileId: { type: String, required: true },
+          originalName: { type: String, default: "" },
+          size: { type: Number, default: 0 },
+          mimeType: { type: String, default: "application/pdf" },
+          url: { type: String, default: "" },
+          // Where the bytes live; older records without it are "local".
+          storage: { type: String, enum: ["local", "gridfs"], default: "local" },
+          uploadedAt: { type: Date, default: Date.now },
+        },
+        { _id: false }
+      ),
+      default: null,
     },
   },
   { _id: false }
@@ -144,6 +172,54 @@ const quizAttemptSchema = new mongoose.Schema(
 );
 
 // ==============================
+// Lesson Check Sub-Schema
+// (the per-lesson assessment stored in Course.modules.lessons.quiz,
+// scored server-side; one entry per lesson, replaced on retake)
+// ==============================
+const lessonCheckSchema = new mongoose.Schema(
+  {
+    moduleId: {
+      type: String,
+      required: true,
+    },
+    lessonId: {
+      type: String,
+      required: true,
+    },
+    answers: {
+      type: [Number],
+      default: [],
+    },
+    correct: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    total: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    percentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    attempts: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+    submittedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
+// ==============================
 // Course Progress Schema
 // ==============================
 const courseProgressSchema = new mongoose.Schema(
@@ -170,6 +246,10 @@ const courseProgressSchema = new mongoose.Schema(
       type: [quizAttemptSchema],
       default: [],
     },
+    lessonChecks: {
+      type: [lessonCheckSchema],
+      default: [],
+    },
   },
   {
     timestamps: true,
@@ -179,5 +259,7 @@ const courseProgressSchema = new mongoose.Schema(
 
 // One progress document per student per course
 courseProgressSchema.index({ user: 1, course: 1 }, { unique: true });
+// Look up the owning submission when a PDF is requested.
+courseProgressSchema.index({ "assignments.file.fileId": 1 }, { sparse: true });
 
 module.exports = mongoose.model("CourseProgress", courseProgressSchema);

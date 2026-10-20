@@ -4,7 +4,9 @@ const router = express.Router();
 const {
   createCourse,
   getAllCourses,
+  getMyFacultyCourses,
   getCourseById,
+  updateCourse,
 } = require("../controllers/courseController");
 
 const {
@@ -20,6 +22,14 @@ const validateObjectId = require("../middleware/validateObjectId");
 // Get all courses
 router.get("/", getAllCourses);
 
+// Get faculty's own courses (Faculty / Admin)
+router.get(
+  "/faculty/my-courses",
+  protect,
+  authorizeRoles("faculty", "admin"),
+  getMyFacultyCourses
+);
+
 // Get course by ID
 router.get("/:id", validateObjectId("id"), getCourseById);
 
@@ -33,6 +43,15 @@ router.post(
   protect,
   authorizeRoles("faculty", "admin"),
   createCourse
+);
+
+// Faculty (own course) / Admin can update course details and lessons
+router.put(
+  "/:id",
+  protect,
+  authorizeRoles("faculty", "admin"),
+  validateObjectId("id"),
+  updateCourse
 );
 
 module.exports = router;

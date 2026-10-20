@@ -1,0 +1,93 @@
+/* Lecture Materials page — layout additions on top of FacultySubmissions.css (fsub-*) */
+
+.flm-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+}
+
+.flm-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.flm-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.flm-field-wide {
+  grid-column: 1 / -1;
+}
+
+/* Full-width variants of the shared select/input styles */
+.flm-input {
+  width: 100%;
+  min-width: 0;
+}
+
+input.flm-input {
+  padding-left: var(--space-3);
+}
+
+.flm-form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.flm-file-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.flm-file-name {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.fsub-submission-row.flm-row {
+  grid-template-columns: 2fr 1.8fr 0.9fr 1.3fr auto;
+}
+
+.flm-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.flm-ppt-chip {
+  background: var(--color-warning-muted);
+  border-color: transparent;
+  color: var(--color-warning);
+}
+
+.flm-danger:hover {
+  color: var(--color-danger);
+}
+
+@media (max-width: 1024px) {
+  .fsub-submission-row.flm-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .flm-form-grid,
+  .fsub-submission-row.flm-row {
+    grid-template-columns: 1fr;
+  }
+}

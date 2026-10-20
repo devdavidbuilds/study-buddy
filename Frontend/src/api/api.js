@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// Same variable Login.jsx uses for Google sign-in; set it to the Render backend URL on Vercel
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
 const API = axios.create({
- baseURL: 'http://localhost:5000/api',
+ baseURL: `${API_BASE_URL.replace(/\/+$/, '')}/api`,
 });
 
 API.interceptors.request.use((config) => {

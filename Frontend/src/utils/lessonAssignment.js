@@ -10,7 +10,16 @@
 // is copied from Udemy/NPTEL or any external source.
 
 // Split a lesson's content into short "key concept" bullets.
+// Structured lessons (lesson.learning) provide real term/definition pairs.
 export function getKeyConcepts(lesson, max = 4) {
+  const concepts = lesson?.learning?.concepts;
+  if (Array.isArray(concepts) && concepts.length) {
+    return concepts
+      .filter((c) => c?.term)
+      .map((c) => (c.definition ? `${c.term}: ${c.definition}` : c.term))
+      .slice(0, Math.max(max, 8));
+  }
+
   const text = (lesson?.content || lesson?.description || '').trim();
   if (!text) return [];
 
@@ -28,6 +37,27 @@ export function getLessonObjective(lesson) {
     lesson?.description ||
     'Understand the core idea of this lesson and be ready to apply it.'
   );
+}
+
+// Estimated minutes for a lesson: the pipeline's estimate when present,
+// otherwise parsed from a duration label such as "30 min" or "1h 20m".
+export function getLessonMinutes(lesson) {
+  if (Number(lesson?.estimatedMinutes) > 0) return Number(lesson.estimatedMinutes);
+
+  const label = String(lesson?.duration || '');
+  const hours = label.match(/(\d+(?:\.\d+)?)\s*h/i);
+  const minutes = label.match(/(\d+)\s*m(?:in)?/i);
+  const total = (hours ? Number(hours[1]) * 60 : 0) + (minutes ? Number(minutes[1]) : 0);
+  return total > 0 ? total : 0;
+}
+
+// "45 min", "1h 20m"
+export function formatMinutes(total) {
+  const value = Math.max(0, Math.round(total));
+  if (value < 60) return `${value} min`;
+  const h = Math.floor(value / 60);
+  const m = value % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
 }
 
 // Build an original, lesson-specific assignment prompt.

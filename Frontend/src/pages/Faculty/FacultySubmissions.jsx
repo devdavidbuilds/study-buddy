@@ -4,8 +4,6 @@ import {
   ClipboardCheck,
   BookOpen,
   FileText,
-  Layers,
-  Hash,
   Clock,
   User,
   AlertCircle,
@@ -15,15 +13,24 @@ import {
   X,
   Save,
   Eye,
-  ChevronRight,
+  Calendar,
+  Search,
+  AlertTriangle,
+  ExternalLink,
+  Download,
+  Hash,
+  RotateCcw,
 } from 'lucide-react';
-import { getCourses } from '../../api/courseApi';
 import { profile } from '../../api/authApi';
+import { getMyFacultyCourses, getCourses } from '../../api/courseApi';
 import {
-  getAssignmentsByCourse,
-  getSubmissionsForAssignment,
+  getFacultySubmissions,
   evaluateSubmission,
+  fetchSubmissionPdf,
+  openSubmissionPdf,
+  downloadSubmissionPdf,
 } from '../../api/assignmentApi';
+import { SubmittedPdf } from '../../components/assignment/PdfUploadField';
 import './FacultySubmissions.css';
 
 const formatDateTime = (value) => {
@@ -38,111 +45,135 @@ const formatDateTime = (value) => {
   }
 };
 
-export default function FacultySubmissions({ onBack }) {
-  /* ── View state: 'courses' | 'assignments' | 'submissions' ── */
-  const [view, setView] = useState('courses');
+const formatFileSize = (bytes) => {
+  if (!bytes && bytes !== 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
-  /* ── Faculty identity (from verified profile, never trusted from UI) ── */
+// Same limits as the backend (assignmentController#evaluateSubmission).
+const MAX_ALLOWED_MAX_MARKS = 1000;
+const MAX_FEEDBACK_LENGTH = 5000;
+
+function StatusBadge({ submission, pendingLabel = 'Pending' }) {
+  if (submission.status === 'Evaluated') {
+    return (
+      <span className="fsub-status-badge fsub-status-evaluated">
+        <CheckCircle2 size={12} /> Evaluated ({submission.marks}/{submission.maxMarks})
+      </span>
+    );
+  }
+  if (submission.status === 'Returned') {
+    return (
+      <span className="fsub-status-badge fsub-status-returned">
+        <RotateCcw size={12} /> Returned for resubmission
+      </span>
+    );
+  }
+  return (
+    <span className="fsub-status-badge fsub-status-pending">
+      <Circle size={12} /> {pendingLabel}
+    </span>
+  );
+}
+
+export default function FacultySubmissions({ onBack }) {
+  /* ── Faculty identity ── */
   const [facultyId, setFacultyId] = useState(null);
 
-  /* ── Courses ─────────────────────── */
+  /* ── Courses for filter dropdown ── */
   const [courses, setCourses] = useState([]);
-  const [loadingCourses, setLoadingCourses] = useState(true);
-  const [coursesError, setCoursesError] = useState(null);
-  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourseId, setSelectedCourseId] = useState('all');
 
-  /* ── Assignments ─────────────────── */
-  const [assignments, setAssignments] = useState([]);
-  const [loadingAssignments, setLoadingAssignments] = useState(false);
-  const [assignmentsError, setAssignmentsError] = useState(null);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  /* ── Filter & Search states ── */
+  const [selectedFilter, setSelectedFilter] = useState('All'); // 'All' | 'Pending Evaluation' | 'Evaluated' | 'Returned' | 'Late'
+  const [searchQuery, setSearchQuery] = useState('');
 
-  /* ── Submissions ──────────────────── */
+  /* ── Submissions state ── */
   const [submissions, setSubmissions] = useState([]);
-  const [assignmentMeta, setAssignmentMeta] = useState(null);
-  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(true);
   const [submissionsError, setSubmissionsError] = useState(null);
 
-  /* ── Open submission modal ────────── */
+  /* ── Modal & Evaluation state ── */
   const [openSubmission, setOpenSubmission] = useState(null);
   const [marksInput, setMarksInput] = useState('');
+  const [maxMarksInput, setMaxMarksInput] = useState('');
   const [feedbackInput, setFeedbackInput] = useState('');
+  const [evaluationStatus, setEvaluationStatus] = useState('Evaluated'); // 'Evaluated' | 'Returned'
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [marksFieldError, setMarksFieldError] = useState(null);
 
-  /* ── Fetch faculty's own courses on mount ── */
+  /* ── Inline PDF preview in modal ── */
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [pdfPreviewState, setPdfPreviewState] = useState('idle'); // idle | loading | error
+  const openFileId = openSubmission?.file?.fileId || null;
+
   useEffect(() => {
-    fetchCourses();
+    if (!openFileId || !openSubmission?.file) {
+      setPdfPreviewUrl(null);
+      setPdfPreviewState('idle');
+      return undefined;
+    }
+    let cancelled = false;
+    let objectUrl = null;
+    setPdfPreviewUrl(null);
+    setPdfPreviewState('loading');
+    fetchSubmissionPdf(openSubmission.file)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPdfPreviewUrl(objectUrl);
+        setPdfPreviewState('idle');
+      })
+      .catch(() => {
+        if (!cancelled) setPdfPreviewState('error');
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openFileId]);
+
+  /* ── Load initial data on mount ── */
+  useEffect(() => {
+    initializePage();
   }, []);
 
-  const fetchCourses = async () => {
-    setLoadingCourses(true);
-    setCoursesError(null);
+  const initializePage = async () => {
+    setLoadingSubmissions(true);
+    setSubmissionsError(null);
     try {
+      // 1. Authenticate faculty identity
       const profileRes = await profile();
       const user = profileRes?.data?.user;
       if (!user?._id) throw new Error('Unable to verify faculty identity');
       setFacultyId(user._id);
 
-      const coursesRes = await getCourses({ limit: 200 });
-      const allCourses = coursesRes?.data?.data || [];
-      const myCourses = allCourses.filter((c) => {
-        const fid = c.faculty?._id || c.faculty;
-        return fid === user._id;
-      });
-      setCourses(myCourses);
-    } catch (err) {
-      console.error('FacultySubmissions courses fetch error:', err);
-      setCoursesError(
-        err?.response?.data?.message || err.message || 'Failed to load courses'
-      );
-    } finally {
-      setLoadingCourses(false);
-    }
-  };
+      // 2. Load courses for the course filter dropdown
+      try {
+        const myCoursesRes = await getMyFacultyCourses();
+        const myCourses = myCoursesRes?.data?.data || [];
+        setCourses(myCourses);
+      } catch {
+        // Fallback to getCourses with faculty filter
+        const fallbackRes = await getCourses({ faculty: user._id, limit: 100 });
+        const all = fallbackRes?.data?.data || [];
+        setCourses(
+          all.filter((c) => {
+            const fid = c.faculty?._id || c.faculty;
+            return String(fid) === String(user._id);
+          })
+        );
+      }
 
-  /* ── Select a course → load its assignments ── */
-  const selectCourse = async (course) => {
-    setSelectedCourse(course);
-    setView('assignments');
-    setAssignments([]);
-    setAssignmentsError(null);
-    setLoadingAssignments(true);
-    try {
-      const res = await getAssignmentsByCourse(course._id);
-      const data = res?.data?.data || [];
-      setAssignments(data);
+      // 3. Load all submissions for this faculty's courses
+      await fetchSubmissionsData();
     } catch (err) {
-      console.error('FacultySubmissions assignments fetch error:', err);
-      setAssignmentsError(
-        err?.response?.data?.message || err.message || 'Failed to load assignments'
-      );
-    } finally {
-      setLoadingAssignments(false);
-    }
-  };
-
-  /* ── Select an assignment → load its submissions ── */
-  const selectAssignment = async (assignment) => {
-    setSelectedAssignment(assignment);
-    setView('submissions');
-    fetchSubmissions(assignment._id);
-  };
-
-  const fetchSubmissions = async (assignmentId) => {
-    setSubmissions([]);
-    setAssignmentMeta(null);
-    setSubmissionsError(null);
-    setLoadingSubmissions(true);
-    try {
-      const res = await getSubmissionsForAssignment(assignmentId);
-      const data = res?.data?.data;
-      setSubmissions(data?.submissions || []);
-      setAssignmentMeta(data?.assignment || null);
-    } catch (err) {
-      console.error('FacultySubmissions submissions fetch error:', err);
+      console.error('FacultySubmissions init error:', err);
       setSubmissionsError(
         err?.response?.data?.message || err.message || 'Failed to load submissions'
       );
@@ -151,27 +182,112 @@ export default function FacultySubmissions({ onBack }) {
     }
   };
 
-  /* ── Navigation ────────────────────── */
-  const backToCourses = () => {
-    setView('courses');
-    setSelectedCourse(null);
-    setAssignments([]);
+  const fetchSubmissionsData = async (courseIdFilter = selectedCourseId) => {
+    try {
+      const params = {};
+      if (courseIdFilter && courseIdFilter !== 'all') {
+        params.courseId = courseIdFilter;
+      }
+      const res = await getFacultySubmissions(params);
+      const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+      setSubmissions(list);
+    } catch (err) {
+      console.error('Fetch submissions error:', err);
+      throw err;
+    }
   };
 
-  const backToAssignments = () => {
-    setView('assignments');
-    setSelectedAssignment(null);
-    setSubmissions([]);
-    setAssignmentMeta(null);
+  const handleRefresh = async () => {
+    setLoadingSubmissions(true);
+    setSubmissionsError(null);
+    try {
+      await fetchSubmissionsData(selectedCourseId);
+    } catch (err) {
+      setSubmissionsError(
+        err?.response?.data?.message || err.message || 'Failed to load submissions'
+      );
+    } finally {
+      setLoadingSubmissions(false);
+    }
   };
 
-  /* ── Open a submission for grading ─── */
+  /* ── Course selector change ── */
+  const handleCourseChange = async (e) => {
+    const newCourseId = e.target.value;
+    setSelectedCourseId(newCourseId);
+    setLoadingSubmissions(true);
+    setSubmissionsError(null);
+    try {
+      await fetchSubmissionsData(newCourseId);
+    } catch (err) {
+      setSubmissionsError(
+        err?.response?.data?.message || err.message || 'Failed to load submissions'
+      );
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
+  /* ── Derived counts for summary stats ── */
+  const stats = useMemo(() => {
+    const total = submissions.length;
+    const pending = submissions.filter((s) => s.status === 'Submitted').length;
+    const evaluated = submissions.filter((s) => s.status === 'Evaluated').length;
+    const returned = submissions.filter((s) => s.status === 'Returned').length;
+    const late = submissions.filter((s) => Boolean(s.isLate)).length;
+    return { total, pending, evaluated, returned, late };
+  }, [submissions]);
+
+  /* ── Filtered submissions ── */
+  const filteredSubmissions = useMemo(() => {
+    return submissions.filter((s) => {
+      // Course filter
+      if (selectedCourseId !== 'all' && String(s.courseId) !== String(selectedCourseId)) {
+        return false;
+      }
+
+      // Status filter
+      if (selectedFilter === 'Pending Evaluation' && s.status !== 'Submitted') {
+        return false;
+      }
+      if (selectedFilter === 'Evaluated' && s.status !== 'Evaluated') {
+        return false;
+      }
+      if (selectedFilter === 'Returned' && s.status !== 'Returned') {
+        return false;
+      }
+      if (selectedFilter === 'Late' && !s.isLate) {
+        return false;
+      }
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const match =
+          (s.studentName || '').toLowerCase().includes(q) ||
+          (s.studentEmail || '').toLowerCase().includes(q) ||
+          (s.assignmentTitle || '').toLowerCase().includes(q) ||
+          (s.courseName || '').toLowerCase().includes(q) ||
+          (s.courseCode || '').toLowerCase().includes(q) ||
+          (s.file?.originalName || '').toLowerCase().includes(q);
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [submissions, selectedCourseId, selectedFilter, searchQuery]);
+
+  /* ── Open submission for evaluation ─── */
   const handleOpenSubmission = (submission) => {
     setOpenSubmission(submission);
     setMarksInput(
-      submission.status === 'Evaluated' ? String(submission.marks ?? '') : ''
+      submission.status === 'Evaluated' && submission.marks !== undefined
+        ? String(submission.marks)
+        : ''
     );
+    setMaxMarksInput(String(submission.maxMarks ?? 10));
     setFeedbackInput(submission.feedback || '');
+    setEvaluationStatus(submission.status === 'Returned' ? 'Returned' : 'Evaluated');
     setSaveError(null);
     setSaveSuccess(false);
     setMarksFieldError(null);
@@ -184,22 +300,32 @@ export default function FacultySubmissions({ onBack }) {
     setMarksFieldError(null);
   };
 
-  const maxMarks = openSubmission?.maxMarks ?? assignmentMeta?.totalMarks ?? 0;
+  const parsedMaxMarks = Number(maxMarksInput);
+  const maxMarksValid =
+    maxMarksInput !== '' && Number.isFinite(parsedMaxMarks) && parsedMaxMarks > 0 && parsedMaxMarks <= MAX_ALLOWED_MAX_MARKS;
+  const maxMarks = maxMarksValid ? parsedMaxMarks : openSubmission?.maxMarks ?? 10;
+  const returning = evaluationStatus === 'Returned';
 
-  const validateMarks = (value) => {
-    if (value === '' || value === null || value === undefined) {
+  const validateEvaluation = () => {
+    if (!maxMarksValid) return `Maximum marks must be greater than 0 and at most ${MAX_ALLOWED_MAX_MARKS}.`;
+    if (returning) {
+      if (!feedbackInput.trim()) return 'Add feedback explaining what the student should change.';
+      if (marksInput === '') return null; // marks are optional when returning
+    } else if (marksInput === '' || marksInput === null || marksInput === undefined) {
       return 'Marks are required.';
     }
-    const n = Number(value);
+    const n = Number(marksInput);
     if (Number.isNaN(n)) return 'Marks must be a number.';
     if (n < 0) return 'Marks cannot be negative.';
     if (n > maxMarks) return `Marks cannot exceed ${maxMarks}.`;
+    if (Math.round(n * 100) !== n * 100) return 'Marks can have at most 2 decimal places.';
+    if (feedbackInput.trim().length > MAX_FEEDBACK_LENGTH) return `Feedback cannot exceed ${MAX_FEEDBACK_LENGTH} characters.`;
     return null;
   };
 
   /* ── Save evaluation ──────────────── */
   const handleSaveEvaluation = async () => {
-    const err = validateMarks(marksInput);
+    const err = validateEvaluation();
     if (err) {
       setMarksFieldError(err);
       return;
@@ -210,37 +336,59 @@ export default function FacultySubmissions({ onBack }) {
     setSaveSuccess(false);
 
     try {
+      const payload = {
+        status: evaluationStatus,
+        ...(marksInput !== '' ? { marks: Number(marksInput) } : {}),
+        feedback: feedbackInput.trim(),
+        courseId: openSubmission.courseId,
+        moduleId: openSubmission.moduleId,
+        lessonId: openSubmission.lessonId,
+        assignmentId: openSubmission.assignmentId,
+        maxMarks,
+      };
+
       const res = await evaluateSubmission(
         openSubmission.assignmentId,
         openSubmission.studentId,
-        { marks: Number(marksInput), feedback: feedbackInput.trim() }
+        payload
       );
 
       const updated = res?.data?.data;
 
-      // Reflect the saved evaluation in the submissions list immediately.
+      // Update in submissions list immediately
       setSubmissions((prev) =>
-        prev.map((s) =>
-          s.studentId === openSubmission.studentId
-            ? {
-                ...s,
-                marks: updated?.marks ?? Number(marksInput),
-                feedback: updated?.feedback ?? feedbackInput.trim(),
-                status: updated?.status || 'Evaluated',
-                evaluatedAt: updated?.evaluatedAt || new Date().toISOString(),
-              }
-            : s
-        )
+        prev.map((s) => {
+          const match =
+            (s.submissionId && openSubmission.submissionId && s.submissionId === openSubmission.submissionId) ||
+            (s.studentId === openSubmission.studentId &&
+              s.courseId === openSubmission.courseId &&
+              s.moduleId === openSubmission.moduleId &&
+              s.lessonId === openSubmission.lessonId);
+          if (!match) return s;
+
+          return {
+            ...s,
+            status: updated?.status || evaluationStatus,
+            marks: updated?.marks ?? Number(marksInput),
+            maxMarks: updated?.maxMarks ?? s.maxMarks,
+            feedback: updated?.feedback ?? feedbackInput.trim(),
+            evaluatedAt: updated?.evaluatedAt || new Date().toISOString(),
+            evaluatedByName: updated?.evaluatedByName || s.evaluatedByName,
+          };
+        })
       );
 
+      // Update openSubmission in modal
       setOpenSubmission((prev) =>
         prev
           ? {
               ...prev,
+              status: updated?.status || evaluationStatus,
               marks: updated?.marks ?? Number(marksInput),
+              maxMarks: updated?.maxMarks ?? prev.maxMarks,
               feedback: updated?.feedback ?? feedbackInput.trim(),
-              status: updated?.status || 'Evaluated',
               evaluatedAt: updated?.evaluatedAt || new Date().toISOString(),
+              evaluatedByName: updated?.evaluatedByName || prev.evaluatedByName,
             }
           : prev
       );
@@ -256,252 +404,251 @@ export default function FacultySubmissions({ onBack }) {
     }
   };
 
-  /* ── Derived counts ────────────────── */
-  const evaluatedCount = useMemo(
-    () => submissions.filter((s) => s.status === 'Evaluated').length,
-    [submissions]
-  );
-  const pendingCount = submissions.length - evaluatedCount;
+  /* ── PDF Quick Actions from list ── */
+  const handleQuickOpenPdf = async (e, file) => {
+    e.stopPropagation();
+    try {
+      await openSubmissionPdf(file);
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Could not open the PDF.');
+    }
+  };
 
-  /* ════════════════════════════════════════════
-     RENDER
-     ════════════════════════════════════════════ */
+  const handleQuickDownloadPdf = async (e, file) => {
+    e.stopPropagation();
+    try {
+      await downloadSubmissionPdf(file);
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Could not download the PDF.');
+    }
+  };
+
   return (
     <div className="fsub-root">
-      {/* ── Header ── */}
+      {/* ── Page Header ── */}
       <div className="fsub-header">
         <button className="fsub-back-btn" onClick={onBack}>
           <ArrowLeft size={14} /> Back to Dashboard
         </button>
         <h1 className="fsub-page-title">
-          <ClipboardCheck size={20} />
+          <ClipboardCheck size={22} />
           Submissions &amp; Evaluation
         </h1>
         <p className="fsub-page-subtitle">
-          Review student submissions and give marks &amp; feedback.
+          Review student submissions, preview submitted PDFs, and assign marks &amp; feedback.
         </p>
       </div>
 
-      {/* ── Breadcrumb ── */}
-      <div className="fsub-breadcrumb">
-        <button
-          className={`fsub-crumb ${view === 'courses' ? 'active' : ''}`}
-          onClick={backToCourses}
-        >
-          My Courses
-        </button>
-        {selectedCourse && (
-          <>
-            <ChevronRight size={13} className="fsub-crumb-sep" />
-            <button
-              className={`fsub-crumb ${view === 'assignments' ? 'active' : ''}`}
-              onClick={() => selectCourse(selectedCourse)}
-            >
-              {selectedCourse.courseName}
-            </button>
-          </>
-        )}
-        {selectedAssignment && (
-          <>
-            <ChevronRight size={13} className="fsub-crumb-sep" />
-            <span className="fsub-crumb active">{selectedAssignment.title}</span>
-          </>
-        )}
+      {/* ── Summary Stats Row ── */}
+      <div className="fsub-summary-row">
+        <div className="fsub-summary-stat">
+          <span className="fsub-summary-value">{stats.total}</span>
+          <span className="fsub-summary-label">Total Submissions</span>
+        </div>
+        <div className="fsub-summary-stat fsub-summary-pending">
+          <span className="fsub-summary-value">{stats.pending}</span>
+          <span className="fsub-summary-label">Pending Evaluation</span>
+        </div>
+        <div className="fsub-summary-stat fsub-summary-evaluated">
+          <span className="fsub-summary-value">{stats.evaluated}</span>
+          <span className="fsub-summary-label">Evaluated</span>
+        </div>
+        <div className="fsub-summary-stat fsub-summary-late">
+          <span className="fsub-summary-value">{stats.late}</span>
+          <span className="fsub-summary-label">Late Submissions</span>
+        </div>
       </div>
 
-      {/* ══════════ STEP 1: My Courses ══════════ */}
-      {view === 'courses' && (
-        <>
-          {loadingCourses ? (
-            <div className="fsub-loading-state">
-              <div className="fsub-loader" />
-              <p>Loading your courses…</p>
-            </div>
-          ) : coursesError ? (
-            <div className="fsub-error-state">
-              <AlertCircle size={32} />
-              <h3>Something went wrong</h3>
-              <p>{coursesError}</p>
-              <button className="fsub-retry-btn" onClick={fetchCourses}>
-                <RefreshCw size={14} /> Retry
-              </button>
-            </div>
-          ) : courses.length === 0 ? (
-            <div className="fsub-empty-state">
-              <BookOpen size={36} className="fsub-empty-icon" />
-              <h3>No courses yet</h3>
-              <p>Create a course before reviewing submissions.</p>
-            </div>
-          ) : (
-            <div className="fsub-course-grid">
-              {courses.map((course) => (
-                <button
-                  key={course._id}
-                  className="fsub-course-card"
-                  onClick={() => selectCourse(course)}
-                >
-                  <span className="fsub-course-thumb">{course.thumbnail || '📘'}</span>
-                  <div className="fsub-course-info">
-                    <h3>{course.courseName}</h3>
-                    <span className="fsub-course-code">
-                      <Hash size={11} /> {course.courseCode}
-                    </span>
-                  </div>
-                  <ChevronRight size={16} className="fsub-course-arrow" />
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      {/* ── Filter & Search Controls Bar ── */}
+      <div className="fsub-filter-row">
+        <div className="fsub-chips">
+          {['All', 'Pending Evaluation', 'Evaluated', 'Returned', 'Late'].map((filterName) => {
+            const count =
+              filterName === 'All'
+                ? stats.total
+                : filterName === 'Pending Evaluation'
+                ? stats.pending
+                : filterName === 'Evaluated'
+                ? stats.evaluated
+                : filterName === 'Returned'
+                ? stats.returned
+                : stats.late;
 
-      {/* ══════════ STEP 2: Assignments for course ══════════ */}
-      {view === 'assignments' && selectedCourse && (
-        <>
-          {loadingAssignments ? (
-            <div className="fsub-loading-state">
-              <div className="fsub-loader" />
-              <p>Loading assignments…</p>
-            </div>
-          ) : assignmentsError ? (
-            <div className="fsub-error-state">
-              <AlertCircle size={32} />
-              <h3>Something went wrong</h3>
-              <p>{assignmentsError}</p>
+            return (
               <button
-                className="fsub-retry-btn"
-                onClick={() => selectCourse(selectedCourse)}
+                key={filterName}
+                type="button"
+                className={`fsub-chip ${selectedFilter === filterName ? 'active' : ''}`}
+                onClick={() => setSelectedFilter(filterName)}
               >
-                <RefreshCw size={14} /> Retry
+                <span>{filterName}</span>
+                <span className="fsub-chip-count">{count}</span>
               </button>
-            </div>
-          ) : assignments.length === 0 ? (
-            <div className="fsub-empty-state">
-              <FileText size={36} className="fsub-empty-icon" />
-              <h3>No assignments yet</h3>
-              <p>Create an assignment for this course to start receiving submissions.</p>
-            </div>
-          ) : (
-            <div className="fsub-assignment-list">
-              {assignments.map((a) => (
-                <button
-                  key={a._id}
-                  className="fsub-assignment-card"
-                  onClick={() => selectAssignment(a)}
-                >
-                  <div className="fsub-assignment-icon">
-                    <FileText size={16} />
-                  </div>
-                  <div className="fsub-assignment-info">
-                    <h3>{a.title}</h3>
-                    <div className="fsub-assignment-meta">
-                      <span>
-                        <Layers size={11} /> {a.totalMarks} marks
-                      </span>
-                      {a.dueDate && (
-                        <span>
-                          <Clock size={11} /> Due {formatDateTime(a.dueDate)}
-                        </span>
-                      )}
-                      <span className={`fsub-status-badge fsub-status-${(a.status || 'Published').toLowerCase()}`}>
-                        {a.status || 'Published'}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="fsub-course-arrow" />
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+            );
+          })}
+        </div>
 
-      {/* ══════════ STEP 3: Student submissions ══════════ */}
-      {view === 'submissions' && selectedAssignment && (
-        <>
-          {!loadingSubmissions && !submissionsError && (
-            <div className="fsub-summary-row">
-              <div className="fsub-summary-stat">
-                <span className="fsub-summary-value">{submissions.length}</span>
-                <span className="fsub-summary-label">Total Submissions</span>
-              </div>
-              <div className="fsub-summary-stat fsub-summary-pending">
-                <span className="fsub-summary-value">{pendingCount}</span>
-                <span className="fsub-summary-label">Pending</span>
-              </div>
-              <div className="fsub-summary-stat fsub-summary-evaluated">
-                <span className="fsub-summary-value">{evaluatedCount}</span>
-                <span className="fsub-summary-label">Evaluated</span>
-              </div>
-            </div>
-          )}
+        <div className="fsub-controls">
+          {/* Course filter dropdown */}
+          <select
+            className="fsub-select"
+            value={selectedCourseId}
+            onChange={handleCourseChange}
+            aria-label="Filter by course"
+          >
+            <option value="all">All Courses ({courses.length})</option>
+            {courses.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.courseCode ? `${c.courseCode} - ` : ''}{c.courseName}
+              </option>
+            ))}
+          </select>
 
-          {loadingSubmissions ? (
-            <div className="fsub-loading-state">
-              <div className="fsub-loader" />
-              <p>Loading submissions…</p>
-            </div>
-          ) : submissionsError ? (
-            <div className="fsub-error-state">
-              <AlertCircle size={32} />
-              <h3>Something went wrong</h3>
-              <p>{submissionsError}</p>
-              <button
-                className="fsub-retry-btn"
-                onClick={() => fetchSubmissions(selectedAssignment._id)}
-              >
-                <RefreshCw size={14} /> Retry
-              </button>
-            </div>
-          ) : submissions.length === 0 ? (
-            <div className="fsub-empty-state">
-              <User size={36} className="fsub-empty-icon" />
-              <h3>No submissions yet</h3>
-              <p>No students have submitted this assignment yet.</p>
-            </div>
-          ) : (
-            <div className="fsub-submission-list">
-              {submissions.map((s) => (
-                <div key={s.studentId} className="fsub-submission-row">
-                  <div className="fsub-submission-student">
-                    <div className="fsub-avatar">
-                      {(s.studentName || '?').charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="fsub-student-name">{s.studentName}</div>
-                      <div className="fsub-student-email">{s.studentEmail}</div>
-                    </div>
-                  </div>
+          {/* Search bar */}
+          <div className="fsub-search-wrap">
+            <Search size={14} className="fsub-search-icon" />
+            <input
+              type="text"
+              className="fsub-search-input"
+              placeholder="Search submissions…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
-                  <div className="fsub-submission-date">
-                    <Clock size={12} />
-                    {formatDateTime(s.submittedAt)}
-                  </div>
+          {/* Refresh button */}
+          <button
+            type="button"
+            className="fsub-chip"
+            onClick={handleRefresh}
+            title="Refresh submissions"
+          >
+            <RefreshCw size={13} className={loadingSubmissions ? 'fsub-spin' : ''} />
+          </button>
+        </div>
+      </div>
 
-                  <div className="fsub-submission-status">
-                    {s.status === 'Evaluated' ? (
-                      <span className="fsub-status-badge fsub-status-evaluated">
-                        <CheckCircle2 size={12} /> Evaluated ({s.marks}/{s.maxMarks})
-                      </span>
-                    ) : (
-                      <span className="fsub-status-badge fsub-status-pending">
-                        <Circle size={12} /> Pending
-                      </span>
-                    )}
-                  </div>
-
-                  <button
-                    className="fsub-open-btn"
-                    onClick={() => handleOpenSubmission(s)}
-                  >
-                    <Eye size={13} />
-                    Open Submission
-                  </button>
+      {/* ── Submissions Content ── */}
+      {loadingSubmissions ? (
+        <div className="fsub-loading-state">
+          <div className="fsub-loader" />
+          <p>Loading student submissions…</p>
+        </div>
+      ) : submissionsError ? (
+        <div className="fsub-error-state">
+          <AlertCircle size={32} />
+          <h3>Something went wrong</h3>
+          <p>{submissionsError}</p>
+          <button className="fsub-retry-btn" onClick={handleRefresh}>
+            <RefreshCw size={14} /> Retry
+          </button>
+        </div>
+      ) : filteredSubmissions.length === 0 ? (
+        <div className="fsub-empty-state">
+          <BookOpen size={36} className="fsub-empty-icon" />
+          <h3>No submissions found</h3>
+          <p>
+            {submissions.length === 0
+              ? 'No student submissions have been recorded for your courses yet.'
+              : 'No submissions match your selected filter or search query.'}
+          </p>
+        </div>
+      ) : (
+        <div className="fsub-submission-list">
+          {filteredSubmissions.map((s) => (
+            <div key={s.submissionId || `${s.studentId}-${s.courseId}-${s.moduleId}-${s.lessonId}`} className="fsub-submission-row">
+              {/* Student info */}
+              <div className="fsub-submission-student">
+                <div className="fsub-avatar">
+                  {(s.studentName || '?').charAt(0).toUpperCase()}
                 </div>
-              ))}
+                <div>
+                  <div className="fsub-student-name">{s.studentName}</div>
+                  <div className="fsub-student-email">{s.studentEmail}</div>
+                </div>
+              </div>
+
+              {/* Course & Assignment */}
+              <div className="fsub-col-assign">
+                <div className="fsub-assign-title" title={s.assignmentTitle}>
+                  {s.assignmentTitle}
+                </div>
+                <div className="fsub-assign-course" title={`${s.courseName} (${s.courseCode})`}>
+                  <span>{s.courseName}</span>
+                  {s.courseCode && (
+                    <span className="fsub-course-code">
+                      <Hash size={10} /> {s.courseCode}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Submitted PDF file */}
+              <div className="fsub-col-file">
+                {s.file ? (
+                  <>
+                    <div
+                      className="fsub-file-chip"
+                      title={`${s.file.originalName} (${formatFileSize(s.file.size)}) - Click to open`}
+                      onClick={(e) => handleQuickOpenPdf(e, s.file)}
+                    >
+                      <FileText size={12} />
+                      <span>{s.file.originalName || 'submission.pdf'}</span>
+                    </div>
+                    <div className="fsub-file-size">
+                      {formatFileSize(s.file.size)}
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        style={{ padding: '0 4px', fontSize: '10px', height: 'auto', marginLeft: '6px' }}
+                        title="Download PDF"
+                        onClick={(e) => handleQuickDownloadPdf(e, s.file)}
+                      >
+                        <Download size={10} />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)' }}>
+                    Text response
+                  </span>
+                )}
+              </div>
+
+              {/* Dates & Deadline */}
+              <div className="fsub-col-dates">
+                <div className="fsub-date-item" title={`Submitted: ${formatDateTime(s.submittedAt)}`}>
+                  <Clock size={11} />
+                  <span>Sub: {formatDateTime(s.submittedAt)}</span>
+                </div>
+                <div className="fsub-date-item" title={`Deadline: ${s.dueDate ? formatDateTime(s.dueDate) : 'No due date'}`}>
+                  <Calendar size={11} />
+                  <span>Due: {s.dueDate ? formatDateTime(s.dueDate) : 'None'}</span>
+                </div>
+                {s.isLate && (
+                  <span className="fsub-late-tag" title="Submitted after deadline">
+                    <AlertTriangle size={10} /> Late
+                  </span>
+                )}
+              </div>
+
+              {/* Status Badge */}
+              <div className="fsub-submission-status">
+                <StatusBadge submission={s} />
+              </div>
+
+              {/* Open Evaluation Button */}
+              <button
+                type="button"
+                className="fsub-open-btn"
+                onClick={() => handleOpenSubmission(s)}
+              >
+                <Eye size={13} />
+                {s.status === 'Submitted' ? 'Evaluate' : 'Review / Edit'}
+              </button>
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
 
       {/* ══════════ Open Submission / Evaluation Modal ══════════ */}
@@ -512,14 +659,19 @@ export default function FacultySubmissions({ onBack }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h3>{openSubmission.studentName}'s Submission</h3>
-              <button className="fsub-modal-close" onClick={closeSubmissionModal}>
+              <h3>{openSubmission.studentName}&apos;s Submission</h3>
+              <button
+                type="button"
+                className="fsub-modal-close"
+                onClick={closeSubmissionModal}
+                aria-label="Close modal"
+              >
                 <X size={18} />
               </button>
             </div>
 
             <div className="modal-body">
-              {/* Submission context */}
+              {/* Submission context metadata */}
               <div className="fsub-modal-meta">
                 <div className="fsub-modal-meta-item">
                   <span className="fsub-modal-meta-label">Assignment</span>
@@ -527,31 +679,75 @@ export default function FacultySubmissions({ onBack }) {
                 </div>
                 <div className="fsub-modal-meta-item">
                   <span className="fsub-modal-meta-label">Course</span>
-                  <span>{openSubmission.courseName}</span>
+                  <span>{openSubmission.courseName} {openSubmission.courseCode ? `(${openSubmission.courseCode})` : ''}</span>
                 </div>
                 <div className="fsub-modal-meta-item">
                   <span className="fsub-modal-meta-label">Submitted</span>
                   <span>{formatDateTime(openSubmission.submittedAt)}</span>
                 </div>
                 <div className="fsub-modal-meta-item">
-                  <span className="fsub-modal-meta-label">Status</span>
+                  <span className="fsub-modal-meta-label">Deadline / Due Date</span>
                   <span>
-                    {openSubmission.status === 'Evaluated' ? (
-                      <span className="fsub-status-badge fsub-status-evaluated">
-                        <CheckCircle2 size={12} /> Evaluated
-                      </span>
-                    ) : (
-                      <span className="fsub-status-badge fsub-status-pending">
-                        <Circle size={12} /> Pending
+                    {openSubmission.dueDate ? formatDateTime(openSubmission.dueDate) : 'No deadline'}
+                    {openSubmission.isLate && (
+                      <span className="fsub-late-tag" style={{ marginLeft: 6 }}>
+                        <AlertTriangle size={10} /> Late
                       </span>
                     )}
                   </span>
                 </div>
+                <div className="fsub-modal-meta-item">
+                  <span className="fsub-modal-meta-label">Status</span>
+                  <span>
+                    <StatusBadge submission={openSubmission} pendingLabel="Pending Evaluation" />
+                  </span>
+                </div>
+                <div className="fsub-modal-meta-item">
+                  <span className="fsub-modal-meta-label">Student Email</span>
+                  <span>{openSubmission.studentEmail || '--'}</span>
+                </div>
+                {openSubmission.status !== 'Submitted' && openSubmission.evaluatedAt && (
+                  <div className="fsub-modal-meta-item">
+                    <span className="fsub-modal-meta-label">
+                      {openSubmission.status === 'Returned' ? 'Returned by' : 'Evaluated by'}
+                    </span>
+                    <span>
+                      {openSubmission.evaluatedByName || 'Faculty'} · {formatDateTime(openSubmission.evaluatedAt)}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Answer(s) */}
+              {/* Submitted PDF section */}
+              {openSubmission.file && (
+                <div className="fsub-modal-section">
+                  <label className="fsub-modal-section-label">Submitted PDF Document</label>
+                  <SubmittedPdf file={openSubmission.file} />
+
+                  {pdfPreviewState === 'loading' && (
+                    <div className="fsub-pdf-preview fsub-pdf-preview-state">
+                      <RefreshCw size={14} className="fsub-spin" style={{ marginRight: 6 }} />
+                      Loading PDF preview…
+                    </div>
+                  )}
+                  {pdfPreviewState === 'error' && (
+                    <div className="fsub-pdf-preview fsub-pdf-preview-state">
+                      The preview could not be embedded. Use Open or Download to view the document.
+                    </div>
+                  )}
+                  {pdfPreviewUrl && (
+                    <iframe
+                      className="fsub-pdf-preview"
+                      src={pdfPreviewUrl}
+                      title={`PDF submitted by ${openSubmission.studentName}`}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Answers list or text */}
               <div className="fsub-modal-section">
-                <label className="fsub-modal-section-label">Answer / Submission</label>
+                <label className="fsub-modal-section-label">Student Answers &amp; Responses</label>
                 {openSubmission.questions && openSubmission.questions.length > 0 ? (
                   <div className="fsub-answers-list">
                     {openSubmission.questions.map((q, i) => (
@@ -562,7 +758,9 @@ export default function FacultySubmissions({ onBack }) {
                         </div>
                         <div className="fsub-answer-text">
                           {openSubmission.answers?.[i] || (
-                            <span className="fsub-muted">No answer provided</span>
+                            <span className="fsub-muted">
+                              {openSubmission.file ? 'Attached in PDF' : 'No answer provided'}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -571,49 +769,110 @@ export default function FacultySubmissions({ onBack }) {
                 ) : (
                   <div className="fsub-answer-text fsub-answer-freeform">
                     {openSubmission.answer || (
-                      <span className="fsub-muted">No answer provided</span>
+                      <span className="fsub-muted">
+                        {openSubmission.file
+                          ? 'Work submitted via attached PDF file.'
+                          : 'No text response provided.'}
+                      </span>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Evaluation form */}
+              {/* Evaluation outcome */}
               <div className="fsub-modal-section">
-                <label className="fsub-modal-section-label" htmlFor="fsub-marks">
-                  Marks (out of {maxMarks})
-                </label>
-                <input
-                  id="fsub-marks"
-                  type="number"
-                  min="0"
-                  max={maxMarks}
-                  className="fsub-marks-input"
-                  value={marksInput}
-                  onChange={(e) => {
-                    setMarksInput(e.target.value);
-                    setMarksFieldError(null);
-                  }}
-                  placeholder={`0 - ${maxMarks}`}
-                />
+                <label className="fsub-modal-section-label">Evaluation Status</label>
+                <div className="fsub-chips" role="radiogroup" aria-label="Evaluation status">
+                  {[
+                    { value: 'Evaluated', label: 'Evaluated', Icon: CheckCircle2 },
+                    { value: 'Returned', label: 'Return for resubmission', Icon: RotateCcw },
+                  ].map(({ value, label, Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={evaluationStatus === value}
+                      className={`fsub-chip ${evaluationStatus === value ? 'active' : ''}`}
+                      onClick={() => {
+                        setEvaluationStatus(value);
+                        setMarksFieldError(null);
+                      }}
+                    >
+                      <Icon size={12} /> <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Evaluation scoring form */}
+              <div className="fsub-modal-section">
+                <div className="fsub-marks-row">
+                  <div className="fsub-marks-field">
+                    <label className="fsub-modal-section-label" htmlFor="fsub-marks">
+                      Marks{returning ? ' (optional)' : ''}
+                    </label>
+                    <input
+                      id="fsub-marks"
+                      type="number"
+                      min="0"
+                      max={maxMarks}
+                      step="0.5"
+                      className="fsub-marks-input"
+                      value={marksInput}
+                      onChange={(e) => {
+                        setMarksInput(e.target.value);
+                        setMarksFieldError(null);
+                      }}
+                      placeholder={`0 - ${maxMarks}`}
+                    />
+                  </div>
+                  <div className="fsub-marks-field">
+                    <label className="fsub-modal-section-label" htmlFor="fsub-max-marks">
+                      Maximum Marks
+                    </label>
+                    <input
+                      id="fsub-max-marks"
+                      type="number"
+                      min="1"
+                      max={MAX_ALLOWED_MAX_MARKS}
+                      className="fsub-marks-input"
+                      value={maxMarksInput}
+                      onChange={(e) => {
+                        setMaxMarksInput(e.target.value);
+                        setMarksFieldError(null);
+                      }}
+                    />
+                  </div>
+                </div>
                 {marksFieldError && (
                   <span className="fsub-field-error">{marksFieldError}</span>
                 )}
               </div>
 
+              {/* Feedback form */}
               <div className="fsub-modal-section">
                 <label className="fsub-modal-section-label" htmlFor="fsub-feedback">
-                  Feedback
+                  Faculty Feedback{returning ? ' (required)' : ''}
                 </label>
                 <textarea
                   id="fsub-feedback"
                   rows={4}
+                  maxLength={MAX_FEEDBACK_LENGTH}
                   className="fsub-feedback-input"
                   value={feedbackInput}
-                  onChange={(e) => setFeedbackInput(e.target.value)}
-                  placeholder="Write feedback for the student…"
+                  onChange={(e) => {
+                    setFeedbackInput(e.target.value);
+                    setMarksFieldError(null);
+                  }}
+                  placeholder={
+                    returning
+                      ? 'Explain what the student needs to change before resubmitting…'
+                      : 'Provide constructive feedback and comments for the student…'
+                  }
                 />
               </div>
 
+              {/* Feedback messages */}
               {saveError && (
                 <div className="fsub-message fsub-message-error">
                   <AlertCircle size={14} />
@@ -623,16 +882,21 @@ export default function FacultySubmissions({ onBack }) {
               {saveSuccess && (
                 <div className="fsub-message fsub-message-success">
                   <CheckCircle2 size={14} />
-                  <span>Evaluation saved successfully.</span>
+                  <span>
+                    {openSubmission.status === 'Returned'
+                      ? 'Submission returned. The student can see your feedback and resubmit.'
+                      : 'Evaluation saved successfully. Student can now see marks & feedback.'}
+                  </span>
                 </div>
               )}
             </div>
 
             <div className="modal-footer">
-              <button className="fsub-cancel-btn" onClick={closeSubmissionModal}>
+              <button type="button" className="fsub-cancel-btn" onClick={closeSubmissionModal}>
                 Close
               </button>
               <button
+                type="button"
                 className="fsub-save-btn"
                 onClick={handleSaveEvaluation}
                 disabled={saving}
@@ -643,7 +907,8 @@ export default function FacultySubmissions({ onBack }) {
                   </>
                 ) : (
                   <>
-                    <Save size={14} /> Save Evaluation
+                    {returning ? <RotateCcw size={14} /> : <Save size={14} />}
+                    {returning ? ' Return to Student' : ' Save Evaluation'}
                   </>
                 )}
               </button>

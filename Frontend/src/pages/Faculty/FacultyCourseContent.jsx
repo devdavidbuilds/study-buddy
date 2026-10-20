@@ -21,7 +21,7 @@ import {
   CheckCircle2,
   Circle,
 } from 'lucide-react';
-import { getCourse } from '../../api/courseApi';
+import { getCourse, updateCourse } from '../../api/courseApi';
 import './FacultyCourseContent.css';
 
 export default function FacultyCourseContent({ courseId, onBack }) {
@@ -41,6 +41,7 @@ export default function FacultyCourseContent({ courseId, onBack }) {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [saveMessage, setSaveMessage] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   /* ── Fetch course on mount / courseId change ── */
   useEffect(() => {
@@ -114,13 +115,49 @@ export default function FacultyCourseContent({ courseId, onBack }) {
     setSaveMessage(null);
   };
 
-  const handleSave = () => {
-    // No PUT /api/courses/:id endpoint exists on the backend.
-    // Report this clearly rather than silently failing.
-    setSaveMessage({
-      type: 'warning',
-      text: 'Cannot save: the backend does not have a course update API yet. A PUT /api/courses/:id endpoint is required. Please add it to Backend/routes/courseRoutes.js and Backend/controllers/courseController.js.',
+  const handleSave = async () => {
+    const lesson = getSelectedLesson();
+    if (!lesson || saving) return;
+
+    if (!editForm.title?.trim()) {
+      setSaveMessage({ type: 'error', text: 'Lesson title is required.' });
+      return;
+    }
+
+    // Send only the fields that changed.
+    const resources = (editForm.resources || []).map((r) => r.trim()).filter(Boolean);
+    const changes = {};
+    ['title', 'duration', 'description', 'content', 'videoUrl'].forEach((field) => {
+      if ((editForm[field] ?? '') !== (lesson[field] ?? '')) changes[field] = editForm[field];
     });
+    if (JSON.stringify(resources) !== JSON.stringify(lesson.resources || [])) changes.resources = resources;
+
+    if (!Object.keys(changes).length) {
+      setEditing(false);
+      setSaveMessage({ type: 'success', text: 'No changes to save.' });
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const res = await updateCourse(courseId, {
+        moduleId: selectedModuleId,
+        lessonId: selectedLessonId,
+        lesson: changes,
+      });
+      if (res?.data?.data) setCourse(res.data.data);
+      setEditing(false);
+      setEditForm({});
+      setSaveMessage({ type: 'success', text: 'Lesson saved. Students will see the changes the next time they open it.' });
+    } catch (err) {
+      setSaveMessage({
+        type: 'error',
+        text: err?.response?.data?.message || 'Could not save the lesson. Please try again.',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateFormField = (field, value) => {
@@ -333,6 +370,13 @@ export default function FacultyCourseContent({ courseId, onBack }) {
                 </button>
               </div>
 
+              {saveMessage && (
+                <div className={`fcc-message fcc-message-${saveMessage.type}`}>
+                  {saveMessage.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                  <span>{saveMessage.text}</span>
+                </div>
+              )}
+
               <div className="fcc-detail-fields">
                 {/* Duration */}
                 <div className="fcc-field">
@@ -426,11 +470,11 @@ export default function FacultyCourseContent({ courseId, onBack }) {
                   <span className="fcc-editing-badge">Editing</span>
                 </h2>
                 <div className="fcc-edit-actions">
-                  <button className="fcc-save-btn" onClick={handleSave}>
+                  <button className="fcc-save-btn" onClick={handleSave} disabled={saving}>
                     <Save size={14} />
-                    Save Changes
+                    {saving ? 'Saving…' : 'Save Changes'}
                   </button>
-                  <button className="fcc-cancel-btn" onClick={cancelEditing}>
+                  <button className="fcc-cancel-btn" onClick={cancelEditing} disabled={saving}>
                     <X size={14} />
                     Cancel
                   </button>

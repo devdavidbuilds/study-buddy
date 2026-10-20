@@ -703,6 +703,10 @@ export default function FacultyStudentProgress({ onBack }) {
                               <span className="fsp-status-badge fsp-status-completed">
                                 <CheckCircle2 size={11} /> {a.marks}/{a.maxMarks}
                               </span>
+                            ) : a.status === 'Returned' ? (
+                              <span className="fsp-status-badge fsp-status-in-progress">
+                                <MinusCircle size={11} /> Returned
+                              </span>
                             ) : (
                               <span className="fsp-status-badge fsp-status-in-progress">
                                 <MinusCircle size={11} /> Pending

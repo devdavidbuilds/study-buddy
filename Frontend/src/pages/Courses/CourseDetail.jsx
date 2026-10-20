@@ -6,7 +6,6 @@ import {
   Play,
   FileText,
   MessageCircle,
-  Download,
   Star,
   Users,
   Heart,
@@ -22,32 +21,19 @@ import GlassCard from '../../components/ui/GlassCard';
 import ProgressBar from '../../components/ui/ProgressBar';
 import ProgressRing from '../../components/ui/ProgressRing';
 import PageState from '../../components/ui/PageState';
+import LectureMaterials from '../../components/course/LectureMaterials';
 import { getCourse, getCourses } from '../../api/courseApi';
 import { getCourseProgress } from '../../api/progressApi';
 import { logCourseOpened } from '../../api/activityApi';
+import { getLessonMinutes, formatMinutes } from '../../utils/lessonAssignment';
 import { generateInitials, getLevelColor } from '../../utils/helpers';
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'modules', label: 'Curriculum', icon: Play },
-  { id: 'resources', label: 'Resources', icon: FileText },
+  { id: 'resources', label: 'Lecture Materials', icon: FileText },
   { id: 'reviews', label: 'Reviews', icon: Star },
   { id: 'discussion', label: 'Discussion', icon: MessageCircle },
-];
-
-const resources = [
-  {
-    id: 'resource-1',
-    title: 'Course Materials',
-    type: 'Course Resource',
-    size: 'Available',
-  },
-  {
-    id: 'resource-2',
-    title: 'Practice Materials',
-    type: 'Practice',
-    size: 'Available',
-  },
 ];
 
 export default function CourseDetail() {
@@ -151,6 +137,21 @@ export default function CourseDetail() {
     }, 0);
   }, [course]);
 
+  // Completion comes from the student's persisted progress (the same
+  // source as the progress ring), keyed by module + lesson id.
+  const completedKeys = useMemo(
+    () =>
+      new Set(
+        (studentProgress?.completedLessons || []).map(
+          (entry) => `${entry.moduleId}::${entry.lessonId}`
+        )
+      ),
+    [studentProgress]
+  );
+
+  const isLessonDone = (module, lesson) =>
+    completedKeys.has(`${module?.id}::${lesson?.id}`);
+
   const completedLessons = useMemo(() => {
     if (!Array.isArray(course?.modules)) return 0;
 
@@ -161,10 +162,24 @@ export default function CourseDetail() {
 
       return (
         total +
-        lessons.filter((lesson) => lesson?.done === true).length
+        lessons.filter((lesson) => completedKeys.has(`${module?.id}::${lesson?.id}`)).length
       );
     }, 0);
-  }, [course]);
+  }, [course, completedKeys]);
+
+  // Estimated study time left, from per-lesson estimates when available.
+  const remainingMinutes = useMemo(() => {
+    if (!Array.isArray(course?.modules)) return 0;
+
+    return course.modules.reduce(
+      (total, module) =>
+        total +
+        (module?.lessons || [])
+          .filter((lesson) => !completedKeys.has(`${module?.id}::${lesson?.id}`))
+          .reduce((sum, lesson) => sum + getLessonMinutes(lesson), 0),
+      0
+    );
+  }, [course, completedKeys]);
 
   const remainingLessons = Math.max(
     0,
@@ -902,12 +917,12 @@ export default function CourseDetail() {
 
                                   <div
                                     className={`lesson-check ${
-                                      lesson?.done
+                                      isLessonDone(module, lesson)
                                         ? 'done'
                                         : ''
                                     }`}
                                   >
-                                    {lesson?.done && (
+                                    {isLessonDone(module, lesson) && (
                                       <CheckCheck
                                         size={12}
                                       />
@@ -942,8 +957,8 @@ export default function CourseDetail() {
                                   >
                                     <Play size={14} />
 
-                                    {lesson?.done
-                                      ? 'Rewatch'
+                                    {isLessonDone(module, lesson)
+                                      ? 'Review'
                                       : 'Start'}
                                   </button>
 
@@ -1012,58 +1027,11 @@ export default function CourseDetail() {
           {/* Resources */}
           {activeTab === 'resources' && (
             <GlassCard>
-
-              {resources.map((resource) => (
-                <div
-                  key={resource.id}
-                  className="resource-row"
-                >
-
-                  <FileText
-                    size={20}
-                    style={{
-                      color: courseColor,
-                      flexShrink: 0,
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      flex: 1,
-                    }}
-                  >
-                    <h5
-                      style={{
-                        fontSize:
-                          'var(--font-size-sm)',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {resource.title}
-                    </h5>
-
-                    <span
-                      style={{
-                        fontSize:
-                          'var(--font-size-xs)',
-                        color:
-                          'var(--text-tertiary)',
-                      }}
-                    >
-                      {resource.type} •{' '}
-                      {resource.size}
-                    </span>
-                  </div>
-
-                  <button
-                    className="btn btn-ghost btn-icon"
-                  >
-                    <Download size={16} />
-                  </button>
-
-                </div>
-              ))}
-
+              <LectureMaterials
+                courseId={course?._id || id}
+                modules={Array.isArray(course?.modules) ? course.modules : []}
+                accentColor={courseColor}
+              />
             </GlassCard>
           )}
 
@@ -1341,7 +1309,9 @@ export default function CourseDetail() {
                 }}
               >
                 {remainingLessons > 0
-                  ? `${remainingLessons} lessons left`
+                  ? `${remainingLessons} lessons left${
+                      remainingMinutes > 0 ? ` · ~${formatMinutes(remainingMinutes)}` : ''
+                    }`
                   : 'Course complete'}
               </span>
 

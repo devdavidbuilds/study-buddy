@@ -2336,3 +2336,285 @@
     font-size: 0.65rem;
   }
 }
+
+/* ---- Structured lesson sections (StructuredLessonSections.jsx) ----
+   Uses existing design tokens only, so light/dark themes apply as-is. */
+.sl-objective-label {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.sl-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.sl-takeaways li::marker {
+  color: var(--color-accent);
+}
+
+.sl-steps {
+  margin: var(--space-3) 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sl-solution {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-success);
+  background: var(--color-success-muted);
+  border-radius: var(--radius-md);
+}
+
+.sl-solution-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.sl-practice-item {
+  padding: var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-3);
+}
+
+.sl-practice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.sl-practice-number {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.sl-practice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.sl-quiz-explanation {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.sl-time-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+/* AI Tutor replies rendered with LessonContentRenderer */
+.ai-markdown {
+  color: inherit;
+  font-size: inherit;
+}
+
+.ai-markdown .lcr-paragraph:last-child,
+.ai-markdown .lcr-list:last-child {
+  margin-bottom: 0;
+}
+
+.ai-markdown .lcr-heading {
+  margin-top: var(--space-3);
+}
+
+/* ===== Assignment PDF upload (student submit + faculty review) ===== */
+.pdf-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+}
+
+.pdf-upload-optional {
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.pdf-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--space-4);
+  border: 1.5px dashed var(--border-color-hover);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-muted);
+  color: var(--text-secondary);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.pdf-dropzone:hover,
+.pdf-dropzone:focus-visible,
+.pdf-dropzone.dragging {
+  border-color: var(--color-accent);
+  background: var(--color-accent-muted);
+  outline: none;
+}
+
+.pdf-dropzone.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pdf-dropzone-title {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.pdf-dropzone-link {
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.pdf-dropzone-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.pdf-file-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+
+.pdf-file-card.compact {
+  padding: 8px 10px;
+}
+
+.pdf-file-icon {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.pdf-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pdf-file-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-file-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.pdf-upload-progress {
+  margin-top: 4px;
+}
+
+.pdf-file-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pdf-file-remove {
+  display: inline-flex;
+  padding: 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.pdf-file-remove:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-muted);
+}
+
+.pdf-upload-current {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pdf-upload-current-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.pdf-upload-error {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}
+
+.submission-status-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: var(--space-3, 0.75rem);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.submission-feedback {
+  margin-top: var(--space-2);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-success-muted);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+  .pdf-file-card {
+    flex-wrap: wrap;
+  }
+
+  .pdf-file-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

@@ -15,6 +15,9 @@ const quizRoutes = require("./routes/quizRoutes");
 const activityRoutes = require("./routes/activityRoutes");
 const facultyProgressRoutes = require("./routes/facultyProgressRoutes");
 const chatbotRoutes = require("./routes/chatbotRoutes");
+const submissionFileRoutes = require("./routes/submissionFileRoutes");
+const aiChatRoutes = require("./routes/aiChat");
+const lectureMaterialRoutes = require("./routes/lectureMaterialRoutes");
 
 // Load Environment Variables
 dotenv.config();
@@ -26,10 +29,13 @@ connectDB();
 const app = express();
 
 // Middleware
-const allowedOrigins = (process.env.FRONTEND_URLS || "http://localhost:5173")
+const allowedOrigins = (
+  process.env.FRONTEND_URLS || "http://localhost:5173"
+)
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -49,12 +55,27 @@ app.use("/api/quizzes", quizRoutes);
 app.use("/api/activity", activityRoutes);
 app.use("/api/faculty/courses", facultyProgressRoutes);
 app.use("/api/chatbot", chatbotRoutes);
+app.use("/api/submissions", submissionFileRoutes);
+app.use("/api/materials", lectureMaterialRoutes);
+
+// Fine-tuned AI Chat Route
+app.use("/api/ai-chat", aiChatRoutes);
 
 // Handle Unknown Routes
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: "Route Not Found",
+  });
+});
+
+// Error Handler
+app.use((err, req, res, next) => {
+  console.error("Backend error:", err.message);
+
+  res.status(err.status || 500).json({
+    success: false,
+    message: "An internal server error occurred.",
   });
 });
 

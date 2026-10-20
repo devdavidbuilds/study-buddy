@@ -1,5 +1,54 @@
 const mongoose = require("mongoose");
 
+// ==============================
+// Structured lesson content (written by the course content pipeline —
+// see services/courseContent). Optional: lessons without it keep working
+// with the plain `content` / `description` fields.
+// ==============================
+const learningSchema = new mongoose.Schema(
+  {
+    // "final-assessment" for the course-wide review + test lesson; unset
+    // for ordinary lessons.
+    kind: { type: String },
+    objectives: { type: [String], default: [] },
+    // Markdown. Also copied into lesson.content so existing renderers and
+    // the AI Tutor keep working.
+    explanation: { type: String, default: "" },
+    concepts: {
+      type: [{ term: String, definition: String, _id: false }],
+      default: [],
+    },
+    examples: {
+      type: [
+        {
+          title: String,
+          scenario: String,
+          steps: [String],
+          solution: String,
+          code: String,
+          language: String,
+          _id: false,
+        },
+      ],
+      default: [],
+    },
+    applications: { type: [String], default: [] },
+    mistakes: {
+      type: [{ mistake: String, fix: String, _id: false }],
+      default: [],
+    },
+    tips: { type: [String], default: [] },
+    takeaways: { type: [String], default: [] },
+    revisionNotes: { type: String, default: "" },
+    // Self-check activities; model answers are shown on request (ungraded).
+    practice: {
+      type: [{ type: { type: String }, prompt: String, hint: String, answer: String, _id: false }],
+      default: [],
+    },
+  },
+  { _id: false }
+);
+
 const lessonSchema = new mongoose.Schema(
   {
     id: {
@@ -50,13 +99,28 @@ const lessonSchema = new mongoose.Schema(
             type: [String],
             default: [],
           },
+          // Correct option text. Never sent to students — the lesson
+          // check is scored server-side (progressController).
           answer: {
+            type: String,
+            default: "",
+          },
+          explanation: {
             type: String,
             default: "",
           },
         },
       ],
       default: [],
+    },
+    estimatedMinutes: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    learning: {
+      type: learningSchema,
+      default: undefined,
     },
   },
   { _id: false }
@@ -72,6 +136,10 @@ const moduleSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    summary: {
+      type: String,
+      default: "",
     },
     lessons: {
       type: [lessonSchema],
@@ -193,6 +261,26 @@ const courseSchema = new mongoose.Schema(
       type: String,
       enum: ["Active", "Archived"],
       default: "Active",
+    },
+
+    // Set by the course content pipeline when structured content is saved.
+    contentMeta: {
+      type: new mongoose.Schema(
+        {
+          version: Number,
+          generatedAt: Date,
+          provider: String,
+          model: String,
+          subjectProfile: String,
+          qualityScore: Number,
+          estimatedMinutes: Number,
+          summary: String,
+          audience: String,
+          prerequisites: [String],
+        },
+        { _id: false }
+      ),
+      default: undefined,
     },
   },
   {
