@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const validator = require("validator");
 const Course = require("../models/Course");
 const User = require("../models/User");
@@ -21,6 +22,9 @@ const sanitizeCourse = (course) => {
 // list responses and only loaded by GET /api/courses/:id.
 const LIST_EXCLUDED_FIELDS =
   "-modules.lessons.learning -modules.lessons.content -modules.lessons.quiz -modules.lessons.resources";
+=======
+const Course = require("../models/Course");
+>>>>>>> origin/main
 
 // ==========================
 // Create Course
@@ -115,6 +119,7 @@ const createCourse = async (req, res) => {
 // ==========================
 const getAllCourses = async (req, res) => {
   try {
+<<<<<<< HEAD
     // Parse pagination query params with safe defaults.
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const maxLimit = req.query.faculty ? 500 : 100;
@@ -171,6 +176,19 @@ const getAllCourses = async (req, res) => {
         .select(LIST_EXCLUDED_FIELDS)
         .populate("faculty", "fullName email")
         .sort(sort)
+=======
+    // Parse pagination query params with safe defaults
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    // Run count and paginated query in parallel for performance
+    const [total, courses] = await Promise.all([
+      Course.countDocuments(),
+      Course.find()
+        .populate("faculty", "fullName email")
+        .sort({ createdAt: -1 })
+>>>>>>> origin/main
         .skip(skip)
         .limit(limit),
     ]);
@@ -180,7 +198,11 @@ const getAllCourses = async (req, res) => {
     res.status(200).json({
       success: true,
       count: courses.length,
+<<<<<<< HEAD
       data: courses.map(sanitizeCourse),
+=======
+      data: courses,
+>>>>>>> origin/main
       page,
       limit,
       total,
@@ -215,7 +237,11 @@ const getCourseById = async (req, res) => {
 
     res.status(200).json({
       success: true,
+<<<<<<< HEAD
       data: sanitizeCourse(course),
+=======
+      data: course,
+>>>>>>> origin/main
     });
   } catch (error) {
     console.error("Get Course Error:", error);
@@ -227,6 +253,7 @@ const getCourseById = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
 // ==========================
 // Update Course
 // PUT /api/courses/:id
@@ -453,4 +480,10 @@ module.exports = {
   getMyFacultyCourses,
   getCourseById,
   updateCourse,
+=======
+module.exports = {
+  createCourse,
+  getAllCourses,
+  getCourseById,
+>>>>>>> origin/main
 };

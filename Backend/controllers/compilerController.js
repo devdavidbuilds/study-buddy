@@ -1,6 +1,7 @@
 const judge0Service = require("../services/judge0Service");
 const Submission = require("../models/Submission");
 
+<<<<<<< HEAD
 const MAX_CODE_LENGTH = 100000;
 const MAX_INPUT_LENGTH = 20000;
 const MAX_TEST_CASES = 20;
@@ -21,6 +22,8 @@ const validateExecutionPayload = (code, testCases) => {
   return null;
 };
 
+=======
+>>>>>>> origin/main
 // ==============================
 // Run Code (Visible Test Cases)
 // ==============================
@@ -35,6 +38,7 @@ const runCode = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     const payloadError = validateExecutionPayload(code, testCases);
     if (payloadError) {
       return res.status(400).json({ success: false, message: payloadError });
@@ -47,6 +51,8 @@ const runCode = async (req, res) => {
       });
     }
 
+=======
+>>>>>>> origin/main
     // If custom input is provided, run single execution
     if (customInput !== undefined && customInput !== null) {
       const result = await judge0Service.executeCode(code, language, customInput);
@@ -125,6 +131,7 @@ const submitCode = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     const payloadError = validateExecutionPayload(code, testCases);
     if (payloadError) {
       return res.status(400).json({ success: false, message: payloadError });
@@ -137,6 +144,8 @@ const submitCode = async (req, res) => {
       });
     }
 
+=======
+>>>>>>> origin/main
     if (!testCases || !Array.isArray(testCases)) {
       return res.status(400).json({
         success: false,
@@ -144,6 +153,7 @@ const submitCode = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     if (testCases.length > MAX_TEST_CASES) {
       return res.status(400).json({
         success: false,
@@ -151,6 +161,8 @@ const submitCode = async (req, res) => {
       });
     }
 
+=======
+>>>>>>> origin/main
     const result = await judge0Service.submitSolution(
       code,
       language,
@@ -213,6 +225,7 @@ const validateTestCases = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     if (testCases.length > MAX_TEST_CASES || testCases.some((testCase) =>
       String(testCase?.input || "").length > MAX_INPUT_LENGTH ||
       String(testCase?.expected || "").length > MAX_INPUT_LENGTH
@@ -223,6 +236,8 @@ const validateTestCases = async (req, res) => {
       });
     }
 
+=======
+>>>>>>> origin/main
     const validated = testCases.map((tc, index) => ({
       id: tc.id || index + 1,
       input: (tc.input || "").trim(),

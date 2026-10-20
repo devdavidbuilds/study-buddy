@@ -420,6 +420,7 @@ const importCourses = async () => {
       return mappedCourse;
     });
 
+<<<<<<< HEAD
     // Re-importing deletes and recreates every imported course with new
     // _ids, which orphans student progress, quizzes, assignments and any
     // enriched content (see scripts/enrichCourses.js). Require an explicit
@@ -432,6 +433,8 @@ const importCourses = async () => {
       );
     }
 
+=======
+>>>>>>> origin/main
     await Course.deleteMany({ courseCode: { $regex: /^COURSE-/i } });
     const insertedCourses = await Course.insertMany(mappedCourses);
 

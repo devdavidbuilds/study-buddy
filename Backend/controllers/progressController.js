@@ -1,5 +1,6 @@
 const Course = require("../models/Course");
 const CourseProgress = require("../models/CourseProgress");
+<<<<<<< HEAD
 const Assignment = require("../models/Assignment");
 const User = require("../models/User");
 const recordActivity = require("../utils/recordActivity");
@@ -21,6 +22,8 @@ const findLessonInCourse = (course, moduleId, lessonId) => {
     lesson: (module.lessons || []).find((entry) => entry.id === lessonId) || null,
   };
 };
+=======
+>>>>>>> origin/main
 
 // ==============================
 // Helper: count total lessons
@@ -34,6 +37,7 @@ const countTotalLessons = (course) => {
 };
 
 // ==============================
+<<<<<<< HEAD
 // Helper: completions that still match a lesson in the course.
 // Completion records are never deleted, but if a course's structure
 // changes, entries for lessons that no longer exist must not inflate the
@@ -65,6 +69,8 @@ const requiresLessonCheck = (lesson) =>
   Boolean(lesson?.learning?.explanation) && Array.isArray(lesson.quiz) && lesson.quiz.length > 0;
 
 // ==============================
+=======
+>>>>>>> origin/main
 // GET  /api/progress/:courseId
 // ==============================
 const getProgress = async (req, res) => {
@@ -82,6 +88,11 @@ const getProgress = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
+=======
+    const totalLessons = countTotalLessons(course);
+
+>>>>>>> origin/main
     // Find or return empty progress
     let progress = await CourseProgress.findOne({
       user: userId,
@@ -94,6 +105,7 @@ const getProgress = async (req, res) => {
         course: courseId,
         completedLessons: [],
         assignments: [],
+<<<<<<< HEAD
         quizAttempts: [],
         lessonChecks: [],
       };
@@ -103,6 +115,14 @@ const getProgress = async (req, res) => {
       course,
       progress.completedLessons
     );
+=======
+      };
+    }
+
+    const completedCount = progress.completedLessons.length;
+    const percentage =
+      totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+>>>>>>> origin/main
 
     res.status(200).json({
       success: true,
@@ -149,6 +169,7 @@ const markLessonComplete = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     const { module, lesson } = findLessonInCourse(course, moduleId, lessonId);
     if (!module || !lesson) {
       return res.status(400).json({
@@ -157,6 +178,8 @@ const markLessonComplete = async (req, res) => {
       });
     }
 
+=======
+>>>>>>> origin/main
     // Upsert progress document
     let progress = await CourseProgress.findOne({
       user: userId,
@@ -169,7 +192,10 @@ const markLessonComplete = async (req, res) => {
         course: courseId,
         completedLessons: [],
         assignments: [],
+<<<<<<< HEAD
         quizAttempts: [],
+=======
+>>>>>>> origin/main
       });
     }
 
@@ -178,6 +204,7 @@ const markLessonComplete = async (req, res) => {
       (entry) => entry.moduleId === moduleId && entry.lessonId === lessonId
     );
 
+<<<<<<< HEAD
     if (!alreadyDone && requiresLessonCheck(lesson)) {
       const checked = (progress.lessonChecks || []).some(
         (entry) => entry.moduleId === moduleId && entry.lessonId === lessonId
@@ -190,6 +217,8 @@ const markLessonComplete = async (req, res) => {
       }
     }
 
+=======
+>>>>>>> origin/main
     if (!alreadyDone) {
       progress.completedLessons.push({
         moduleId,
@@ -200,6 +229,7 @@ const markLessonComplete = async (req, res) => {
 
     await progress.save();
 
+<<<<<<< HEAD
     // Only log a new activity the first time this lesson is completed —
     // re-hitting this endpoint for an already-completed lesson is a no-op
     // and shouldn't create a duplicate history entry.
@@ -218,6 +248,12 @@ const markLessonComplete = async (req, res) => {
       course,
       progress.completedLessons
     );
+=======
+    const totalLessons = countTotalLessons(course);
+    const completedCount = progress.completedLessons.length;
+    const percentage =
+      totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+>>>>>>> origin/main
 
     res.status(200).json({
       success: true,
@@ -244,6 +280,7 @@ const markLessonComplete = async (req, res) => {
 // ==============================
 // POST /api/progress/:courseId/submit
 // ==============================
+<<<<<<< HEAD
 // Accepts JSON, or multipart/form-data with an optional PDF in "file"
 // (see middleware/uploadSubmissionPdf). In multipart requests `answers`
 // arrives as a JSON-encoded string.
@@ -284,6 +321,18 @@ const submitAssignment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "moduleId and lessonId are required.",
+=======
+const submitAssignment = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { courseId } = req.params;
+    const { moduleId, lessonId, title, answer } = req.body;
+
+    if (!moduleId || !lessonId || !answer) {
+      return res.status(400).json({
+        success: false,
+        message: "moduleId, lessonId, and answer are required.",
+>>>>>>> origin/main
       });
     }
 
@@ -297,6 +346,7 @@ const submitAssignment = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     const { module, lesson } = findLessonInCourse(course, moduleId, lessonId);
     if (!module || !lesson) {
       return res.status(400).json({
@@ -307,11 +357,15 @@ const submitAssignment = async (req, res) => {
 
     // Load the student's progress up front: a resubmission may keep the PDF
     // that was uploaded earlier.
+=======
+    // Upsert progress document
+>>>>>>> origin/main
     let progress = await CourseProgress.findOne({
       user: userId,
       course: courseId,
     });
 
+<<<<<<< HEAD
     const findExistingIndex = (entryAssignmentId) =>
       progress
         ? progress.assignments.findIndex((a) =>
@@ -454,6 +508,8 @@ const submitAssignment = async (req, res) => {
     }
 
     // Upsert progress document
+=======
+>>>>>>> origin/main
     if (!progress) {
       progress = new CourseProgress({
         user: userId,
@@ -463,6 +519,7 @@ const submitAssignment = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Find this exact submission's existing entry (resubmission) or create
     // a new one. Faculty assignments are matched by assignmentId so two
     // assignments on the same lesson never overwrite each other; the
@@ -480,6 +537,29 @@ const submitAssignment = async (req, res) => {
       // fresh "Submitted" state so faculty re-review it.
       progress.assignments[existingIndex] = {
         ...progress.assignments[existingIndex].toObject(),
+=======
+    // Find existing assignment entry or create new
+    const existingIndex = progress.assignments.findIndex(
+      (a) => a.moduleId === moduleId && a.lessonId === lessonId
+    );
+
+    const assignmentEntry = {
+      moduleId,
+      lessonId,
+      title: title || "",
+      answer,
+      status: "Submitted",
+      marks: 0,
+      maxMarks: 10,
+      submittedAt: new Date(),
+      evaluatedAt: null,
+      feedback: "",
+    };
+
+    if (existingIndex >= 0) {
+      progress.assignments[existingIndex] = {
+        ...progress.assignments[existingIndex],
+>>>>>>> origin/main
         ...assignmentEntry,
       };
     } else {
@@ -487,6 +567,7 @@ const submitAssignment = async (req, res) => {
     }
 
     await progress.save();
+<<<<<<< HEAD
     keepUpload = true;
     if (replacedFile && replacedFile.fileId !== uploadedFile?.fileId) removeStoredFile(replacedFile);
 
@@ -504,6 +585,8 @@ const submitAssignment = async (req, res) => {
         hasPdf: Boolean(uploadedFile),
       },
     });
+=======
+>>>>>>> origin/main
 
     res.status(200).json({
       success: true,
@@ -519,6 +602,7 @@ const submitAssignment = async (req, res) => {
       success: false,
       message: error.message,
     });
+<<<<<<< HEAD
   } finally {
     if (req.file && !keepUpload) {
       removeFile(req.file.path);
@@ -720,6 +804,8 @@ const getMySubmissions = async (req, res) => {
   } catch (error) {
     console.error("Get My Submissions Error:", error);
     res.status(500).json({ success: false, message: error.message });
+=======
+>>>>>>> origin/main
   }
 };
 
@@ -727,6 +813,9 @@ module.exports = {
   getProgress,
   markLessonComplete,
   submitAssignment,
+<<<<<<< HEAD
   submitLessonCheck,
   getMySubmissions,
+=======
+>>>>>>> origin/main
 };

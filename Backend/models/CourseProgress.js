@@ -13,6 +13,7 @@ const assignmentEntrySchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+<<<<<<< HEAD
     // Reference to the faculty-created Assignment document, when this
     // submission is for a real assignment (as opposed to the legacy
     // auto-generated lesson prompt, which only used `answer`).
@@ -21,15 +22,21 @@ const assignmentEntrySchema = new mongoose.Schema(
       ref: "Assignment",
       default: null,
     },
+=======
+>>>>>>> origin/main
     title: {
       type: String,
       default: "",
     },
+<<<<<<< HEAD
     // Legacy free-text answer (auto-generated lesson prompt flow).
+=======
+>>>>>>> origin/main
     answer: {
       type: String,
       default: "",
     },
+<<<<<<< HEAD
     // Per-question answers for a real Assignment (index-aligned with
     // Assignment.questions).
     answers: {
@@ -41,6 +48,11 @@ const assignmentEntrySchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Not Started", "In Progress", "Submitted", "Evaluated", "Returned"],
+=======
+    status: {
+      type: String,
+      enum: ["Not Started", "In Progress", "Submitted", "Evaluated"],
+>>>>>>> origin/main
       default: "Not Started",
     },
     marks: {
@@ -59,16 +71,20 @@ const assignmentEntrySchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+<<<<<<< HEAD
     // Faculty/admin who last evaluated or returned this submission.
     evaluatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
+=======
+>>>>>>> origin/main
     feedback: {
       type: String,
       default: "",
     },
+<<<<<<< HEAD
     // Optional PDF uploaded with the submission. The file lives in private
     // storage (GridFS or the uploads directory — see utils/submissionFiles)
     // and is only served through the authenticated
@@ -89,6 +105,8 @@ const assignmentEntrySchema = new mongoose.Schema(
       ),
       default: null,
     },
+=======
+>>>>>>> origin/main
   },
   { _id: false }
 );
@@ -115,6 +133,7 @@ const completedLessonSchema = new mongoose.Schema(
 );
 
 // ==============================
+<<<<<<< HEAD
 // Quiz Attempt Sub-Schema
 // ==============================
 const quizAttemptSchema = new mongoose.Schema(
@@ -220,6 +239,8 @@ const lessonCheckSchema = new mongoose.Schema(
 );
 
 // ==============================
+=======
+>>>>>>> origin/main
 // Course Progress Schema
 // ==============================
 const courseProgressSchema = new mongoose.Schema(
@@ -242,6 +263,7 @@ const courseProgressSchema = new mongoose.Schema(
       type: [assignmentEntrySchema],
       default: [],
     },
+<<<<<<< HEAD
     quizAttempts: {
       type: [quizAttemptSchema],
       default: [],
@@ -250,6 +272,8 @@ const courseProgressSchema = new mongoose.Schema(
       type: [lessonCheckSchema],
       default: [],
     },
+=======
+>>>>>>> origin/main
   },
   {
     timestamps: true,
@@ -259,7 +283,10 @@ const courseProgressSchema = new mongoose.Schema(
 
 // One progress document per student per course
 courseProgressSchema.index({ user: 1, course: 1 }, { unique: true });
+<<<<<<< HEAD
 // Look up the owning submission when a PDF is requested.
 courseProgressSchema.index({ "assignments.file.fileId": 1 }, { sparse: true });
+=======
+>>>>>>> origin/main
 
 module.exports = mongoose.model("CourseProgress", courseProgressSchema);

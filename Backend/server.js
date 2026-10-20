@@ -9,6 +9,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 const compilerRoutes = require("./routes/compilerRoutes");
+<<<<<<< HEAD
 const progressRoutes = require("./routes/progressRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const quizRoutes = require("./routes/quizRoutes");
@@ -18,6 +19,8 @@ const chatbotRoutes = require("./routes/chatbotRoutes");
 const submissionFileRoutes = require("./routes/submissionFileRoutes");
 const aiChatRoutes = require("./routes/aiChat");
 const lectureMaterialRoutes = require("./routes/lectureMaterialRoutes");
+=======
+>>>>>>> origin/main
 
 // Load Environment Variables
 dotenv.config();
@@ -29,6 +32,7 @@ connectDB();
 const app = express();
 
 // Middleware
+<<<<<<< HEAD
 const allowedOrigins = (
   process.env.FRONTEND_URLS || "http://localhost:5173"
 )
@@ -38,6 +42,10 @@ const allowedOrigins = (
 
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: "256kb" }));
+=======
+app.use(cors());
+app.use(express.json());
+>>>>>>> origin/main
 app.use(express.urlencoded({ extended: true }));
 
 // Root Route
@@ -49,6 +57,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/compiler", compilerRoutes);
+<<<<<<< HEAD
 app.use("/api/progress", progressRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/quizzes", quizRoutes);
@@ -60,6 +69,8 @@ app.use("/api/materials", lectureMaterialRoutes);
 
 // Fine-tuned AI Chat Route
 app.use("/api/ai-chat", aiChatRoutes);
+=======
+>>>>>>> origin/main
 
 // Handle Unknown Routes
 app.use((req, res) => {
@@ -69,6 +80,7 @@ app.use((req, res) => {
   });
 });
 
+<<<<<<< HEAD
 // Error Handler
 app.use((err, req, res, next) => {
   console.error("Backend error:", err.message);
@@ -79,6 +91,8 @@ app.use((err, req, res, next) => {
   });
 });
 
+=======
+>>>>>>> origin/main
 // Start Server
 const PORT = process.env.PORT || 5000;
 

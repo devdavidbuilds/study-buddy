@@ -25,14 +25,19 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
+<<<<<<< HEAD
       required: function () {
         return !this.googleId;
       },
+=======
+      required: [true, "Password is required"],
+>>>>>>> origin/main
       minlength: [8, "Password must be at least 8 characters"],
       maxlength: [100, "Password cannot exceed 100 characters"],
       select: false,
     },
 
+<<<<<<< HEAD
     googleId: {
       type: String,
       unique: true,
@@ -45,6 +50,8 @@ const userSchema = new mongoose.Schema(
       default: "local",
     },
 
+=======
+>>>>>>> origin/main
     role: {
       type: String,
       enum: ["student", "faculty", "admin"],
@@ -76,7 +83,11 @@ userSchema.pre("save", function (next) {
 
 // Hash password
 userSchema.pre("save", async function (next) {
+<<<<<<< HEAD
   if (!this.password || !this.isModified("password")) {
+=======
+  if (!this.isModified("password")) {
+>>>>>>> origin/main
     return next();
   }
 

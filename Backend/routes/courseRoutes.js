@@ -4,16 +4,23 @@ const router = express.Router();
 const {
   createCourse,
   getAllCourses,
+<<<<<<< HEAD
   getMyFacultyCourses,
   getCourseById,
   updateCourse,
+=======
+  getCourseById,
+>>>>>>> origin/main
 } = require("../controllers/courseController");
 
 const {
   protect,
   authorizeRoles,
 } = require("../middleware/authMiddleware");
+<<<<<<< HEAD
 const validateObjectId = require("../middleware/validateObjectId");
+=======
+>>>>>>> origin/main
 
 // ===============================
 // Public Routes
@@ -22,6 +29,7 @@ const validateObjectId = require("../middleware/validateObjectId");
 // Get all courses
 router.get("/", getAllCourses);
 
+<<<<<<< HEAD
 // Get faculty's own courses (Faculty / Admin)
 router.get(
   "/faculty/my-courses",
@@ -32,6 +40,10 @@ router.get(
 
 // Get course by ID
 router.get("/:id", validateObjectId("id"), getCourseById);
+=======
+// Get course by ID
+router.get("/:id", getCourseById);
+>>>>>>> origin/main
 
 // ===============================
 // Protected Routes
@@ -45,6 +57,7 @@ router.post(
   createCourse
 );
 
+<<<<<<< HEAD
 // Faculty (own course) / Admin can update course details and lessons
 router.put(
   "/:id",
@@ -54,4 +67,6 @@ router.put(
   updateCourse
 );
 
+=======
+>>>>>>> origin/main
 module.exports = router;

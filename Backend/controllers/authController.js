@@ -1,14 +1,21 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
+<<<<<<< HEAD
 const axios = require("axios");
+=======
+>>>>>>> origin/main
 
 // ==============================
 // Register User
 // ==============================
 const registerUser = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { fullName, email, password } = req.body;
+=======
+    const { fullName, email, password, role } = req.body;
+>>>>>>> origin/main
 
     // Validate required fields
     if (!fullName || !email || !password) {
@@ -46,13 +53,21 @@ const registerUser = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Public registration must never allow a caller to self-assign a
     // privileged role. Faculty/admin accounts require a protected flow.
+=======
+    // Password is hashed automatically by User.js
+>>>>>>> origin/main
     const user = await User.create({
       fullName,
       email,
       password,
+<<<<<<< HEAD
       role: "student",
+=======
+      role: role || "student",
+>>>>>>> origin/main
     });
 
     // Generate JWT
@@ -196,6 +211,7 @@ const getProfile = async (req, res) => {
   }
 };
 
+<<<<<<< HEAD
 // ==============================
 // Google OAuth Initiation
 // ==============================
@@ -380,10 +396,15 @@ const googleCallback = async (req, res) => {
   }
 };
 
+=======
+>>>>>>> origin/main
 module.exports = {
   registerUser,
   loginUser,
   getProfile,
+<<<<<<< HEAD
   googleAuth,
   googleCallback,
+=======
+>>>>>>> origin/main
 };

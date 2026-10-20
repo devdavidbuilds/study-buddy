@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+<<<<<<< HEAD
 // ==============================
 // Structured lesson content (written by the course content pipeline —
 // see services/courseContent). Optional: lessons without it keep working
@@ -49,6 +50,8 @@ const learningSchema = new mongoose.Schema(
   { _id: false }
 );
 
+=======
+>>>>>>> origin/main
 const lessonSchema = new mongoose.Schema(
   {
     id: {
@@ -99,20 +102,27 @@ const lessonSchema = new mongoose.Schema(
             type: [String],
             default: [],
           },
+<<<<<<< HEAD
           // Correct option text. Never sent to students — the lesson
           // check is scored server-side (progressController).
+=======
+>>>>>>> origin/main
           answer: {
             type: String,
             default: "",
           },
+<<<<<<< HEAD
           explanation: {
             type: String,
             default: "",
           },
+=======
+>>>>>>> origin/main
         },
       ],
       default: [],
     },
+<<<<<<< HEAD
     estimatedMinutes: {
       type: Number,
       default: 0,
@@ -122,6 +132,8 @@ const lessonSchema = new mongoose.Schema(
       type: learningSchema,
       default: undefined,
     },
+=======
+>>>>>>> origin/main
   },
   { _id: false }
 );
@@ -137,10 +149,13 @@ const moduleSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+<<<<<<< HEAD
     summary: {
       type: String,
       default: "",
     },
+=======
+>>>>>>> origin/main
     lessons: {
       type: [lessonSchema],
       default: [],
@@ -262,6 +277,7 @@ const courseSchema = new mongoose.Schema(
       enum: ["Active", "Archived"],
       default: "Active",
     },
+<<<<<<< HEAD
 
     // Set by the course content pipeline when structured content is saved.
     contentMeta: {
@@ -282,6 +298,8 @@ const courseSchema = new mongoose.Schema(
       ),
       default: undefined,
     },
+=======
+>>>>>>> origin/main
   },
   {
     timestamps: true,
