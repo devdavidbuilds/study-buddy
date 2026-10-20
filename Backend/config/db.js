@@ -21,10 +21,15 @@ const connectDB = async () => {
         process.exit(1);
     }
 
-    try {
-        await mongoose.connect(uri);
+    // A URI without a database path makes the driver fall back to "test";
+    // use the project database instead. A database named in the URI still wins.
+    const hasDbName = /^mongodb(\+srv)?:\/\/[^/]+\/[^/?]+/.test(uri);
+    const options = hasDbName ? {} : { dbName: "studybuddy" };
 
-        console.log("✅ MongoDB Connected Successfully");
+    try {
+        await mongoose.connect(uri, options);
+
+        console.log(`✅ MongoDB Connected Successfully (database: ${mongoose.connection.name})`);
     } catch (error) {
         console.error("❌ MongoDB Connection Failed");
         // The driver's message never includes the password from the URI.
