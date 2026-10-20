@@ -1,14 +1,33 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, GraduationCap, BookOpen } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  GraduationCap,
+  BookOpen,
+} from 'lucide-react';
+
 import Button from '../../components/ui/Button';
 import GlassCard from '../../components/ui/GlassCard';
 import { login, profile } from '../../api/authApi';
 import { setAuthToken } from '../../api/api';
 import './Login.css';
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  'https://study-buddy-91gv.onrender.com'
+).replace(/\/+$/, '');
+
 const GoogleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    style={{ flexShrink: 0 }}
+  >
     <path
       fill="#4285F4"
       d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.88c2.27-2.09 3.66-5.17 3.66-9.09z"
@@ -44,7 +63,7 @@ export default function Login() {
     const authError = searchParams.get('error');
 
     if (authError) {
-      setError(decodeURIComponent(authError));
+      setError(authError);
       setSearchParams({}, { replace: true });
       return;
     }
@@ -52,14 +71,17 @@ export default function Login() {
     if (token) {
       setLoading(true);
       setAuthToken(token);
+
       profile()
         .then((res) => {
           const user = res?.data?.user;
+
           if (user) {
             localStorage.setItem(
               'studyBuddyProfile',
               JSON.stringify(user)
             );
+
             if (user.role === 'faculty') {
               navigate('/faculty');
             } else {
@@ -81,10 +103,8 @@ export default function Login() {
   }, [searchParams, navigate, setSearchParams]);
 
   const handleGoogleSignIn = () => {
-    // Redirect to backend Google OAuth entry point
-    const backendUrl =
-      import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-    window.location.href = `${backendUrl}/api/auth/google?role=${loginType}`;
+    window.location.href =
+      `${API_BASE_URL}/api/auth/google?role=${encodeURIComponent(loginType)}`;
   };
 
   const handleSubmit = async (e) => {
@@ -110,33 +130,29 @@ export default function Login() {
         return;
       }
 
-      // Get the role returned by the backend — never trust the toggle
       const userRole =
         response?.data?.user?.role ||
         response?.data?.data?.user?.role ||
         'student';
 
-      // Validate role against the selected login type
       if (loginType === 'faculty') {
-        // Faculty login: only allow faculty or admin
         if (userRole === 'student') {
           setError(
             'This account is registered as a student. Please use Student Login.'
           );
           return;
         }
-        // Store JWT and navigate to faculty dashboard
+
         setAuthToken(token);
         navigate('/faculty');
       } else {
-        // Student login: only allow students
         if (userRole === 'faculty' || userRole === 'admin') {
           setError(
             'This account is registered as faculty. Please use Faculty Login.'
           );
           return;
         }
-        // Store JWT and go to existing Study Buddy workspace
+
         setAuthToken(token);
         navigate('/workspace');
       }
@@ -145,8 +161,8 @@ export default function Login() {
 
       setError(
         err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          'Unable to connect to the authentication service.'
+        err?.response?.data?.error ||
+        'Unable to connect to the authentication service.'
       );
     } finally {
       setLoading(false);
@@ -161,9 +177,7 @@ export default function Login() {
 
           <h2>
             Welcome to{' '}
-            <span className="gradient-text">
-              Study Buddy
-            </span>
+            <span className="gradient-text">Study Buddy</span>
           </h2>
 
           <p>
@@ -186,14 +200,11 @@ export default function Login() {
 
             <p>
               Sign in to continue your{' '}
-              {loginType === 'faculty'
-                ? 'teaching'
-                : 'learning'}{' '}
+              {loginType === 'faculty' ? 'teaching' : 'learning'}{' '}
               journey
             </p>
           </div>
 
-          {/* ── Login Type Toggle ── */}
           <div className="login-type-toggle">
             <button
               type="button"
@@ -224,29 +235,21 @@ export default function Login() {
             </button>
           </div>
 
-          <form
-            className="login-form"
-            onSubmit={handleSubmit}
-          >
+          <form className="login-form" onSubmit={handleSubmit}>
             <div className="input-group">
               <label className="input-label">
                 Email Address
               </label>
 
               <div className="input-field-wrapper">
-                <Mail
-                  size={18}
-                  className="input-icon"
-                />
+                <Mail size={18} className="input-icon" />
 
                 <input
                   type="email"
                   className="input-field"
                   placeholder="you@university.edu"
                   value={email}
-                  onChange={(e) =>
-                    setEmail(e.target.value)
-                  }
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -258,36 +261,23 @@ export default function Login() {
               </label>
 
               <div className="input-field-wrapper">
-                <Lock
-                  size={18}
-                  className="input-icon"
-                />
+                <Lock size={18} className="input-icon" />
 
                 <input
-                  type={
-                    showPassword
-                      ? 'text'
-                      : 'password'
-                  }
+                  type={showPassword ? 'text' : 'password'}
                   className="input-field"
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
 
                 <button
                   type="button"
                   className="input-action"
-                  onClick={() =>
-                    setShowPassword(!showPassword)
-                  }
+                  onClick={() => setShowPassword(!showPassword)}
                   aria-label={
-                    showPassword
-                      ? 'Hide password'
-                      : 'Show password'
+                    showPassword ? 'Hide password' : 'Show password'
                   }
                 >
                   {showPassword ? (
@@ -313,19 +303,14 @@ export default function Login() {
 
             <div className="form-row">
               <label className="remember-me">
-                <input
-                  type="checkbox"
-                  defaultChecked
-                />
+                <input type="checkbox" defaultChecked />
                 Remember me
               </label>
 
               <a
                 href="#"
                 className="forgot-link"
-                onClick={(e) =>
-                  e.preventDefault()
-                }
+                onClick={(e) => e.preventDefault()}
               >
                 Forgot password?
               </a>
@@ -373,9 +358,7 @@ export default function Login() {
 
           <div className="login-footer">
             Don't have an account?{' '}
-            <Link to="/signup">
-              Sign up
-            </Link>
+            <Link to="/signup">Sign up</Link>
           </div>
         </GlassCard>
       </div>

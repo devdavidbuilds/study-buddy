@@ -1,20 +1,24 @@
 import axios from 'axios';
 
-// Same variable Login.jsx uses for Google sign-in; set it to the Render backend URL on Vercel
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// Backend URL from Vercel environment variables, with Render fallback
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  'https://study-buddy-91gv.onrender.com';
 
 const API = axios.create({
- baseURL: `${API_BASE_URL.replace(/\/+$/, '')}/api`,
+  baseURL: `${API_BASE_URL.replace(/\/+$/, '')}/api`,
 });
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('studyBuddyToken');
+
   if (token) {
     config.headers = {
       ...config.headers,
       Authorization: `Bearer ${token}`,
     };
   }
+
   return config;
 });
 
@@ -24,10 +28,12 @@ API.interceptors.response.use(
     if (error?.response?.status === 401) {
       localStorage.removeItem('studyBuddyToken');
       localStorage.removeItem('studyBuddyProfile');
+
       if (window.location.pathname !== '/login') {
         window.location.assign('/login');
       }
     }
+
     return Promise.reject(error);
   }
 );
@@ -40,6 +46,7 @@ export const setAuthToken = (token) => {
   }
 };
 
-export const getAuthToken = () => localStorage.getItem('studyBuddyToken');
+export const getAuthToken = () =>
+  localStorage.getItem('studyBuddyToken');
 
 export default API;
