@@ -25,19 +25,14 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-<<<<<<< HEAD
       required: function () {
         return !this.googleId;
       },
-=======
-      required: [true, "Password is required"],
->>>>>>> origin/main
       minlength: [8, "Password must be at least 8 characters"],
       maxlength: [100, "Password cannot exceed 100 characters"],
       select: false,
     },
 
-<<<<<<< HEAD
     googleId: {
       type: String,
       unique: true,
@@ -50,8 +45,6 @@ const userSchema = new mongoose.Schema(
       default: "local",
     },
 
-=======
->>>>>>> origin/main
     role: {
       type: String,
       enum: ["student", "faculty", "admin"],
@@ -74,32 +67,25 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Clean data before saving
+// Normalize user details before saving.
 userSchema.pre("save", function (next) {
-  this.fullName = this.fullName.trim();
-  this.email = this.email.trim().toLowerCase();
+  if (this.fullName) this.fullName = this.fullName.trim();
+  if (this.email) this.email = this.email.trim().toLowerCase();
   next();
 });
 
-// Hash password
-userSchema.pre("save", async function (next) {
-<<<<<<< HEAD
-  if (!this.password || !this.isModified("password")) {
-=======
-  if (!this.isModified("password")) {
->>>>>>> origin/main
-    return next();
-  }
+// Hash local passwords before saving.
+userSchema.pre("save", async function () {
+  if (!this.password || !this.isModified("password")) return;
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-
-  next();
 });
 
-// Compare password during login
+// Compare password during login.
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  if (!this.password) return false;
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
 module.exports = mongoose.model("User", userSchema);

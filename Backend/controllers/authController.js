@@ -1,23 +1,13 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
-<<<<<<< HEAD
 const axios = require("axios");
-=======
->>>>>>> origin/main
 
-// ==============================
 // Register User
-// ==============================
 const registerUser = async (req, res) => {
   try {
-<<<<<<< HEAD
     const { fullName, email, password } = req.body;
-=======
-    const { fullName, email, password, role } = req.body;
->>>>>>> origin/main
 
-    // Validate required fields
     if (!fullName || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -25,7 +15,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Validate email
     if (!validator.isEmail(email)) {
       return res.status(400).json({
         success: false,
@@ -33,7 +22,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Validate password length
     if (!validator.isLength(password, { min: 8 })) {
       return res.status(400).json({
         success: false,
@@ -41,7 +29,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Check if email already exists
     const existingUser = await User.findOne({
       email: email.toLowerCase(),
     });
@@ -53,33 +40,18 @@ const registerUser = async (req, res) => {
       });
     }
 
-<<<<<<< HEAD
-    // Public registration must never allow a caller to self-assign a
-    // privileged role. Faculty/admin accounts require a protected flow.
-=======
-    // Password is hashed automatically by User.js
->>>>>>> origin/main
+    // Public registration must not allow self-assignment of privileged roles.
     const user = await User.create({
       fullName,
-      email,
+      email: email.toLowerCase(),
       password,
-<<<<<<< HEAD
       role: "student",
-=======
-      role: role || "student",
->>>>>>> origin/main
     });
 
-    // Generate JWT
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-      },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
+      { expiresIn: "7d" }
     );
 
     return res.status(201).json({
@@ -96,7 +68,6 @@ const registerUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Register Error:", error.message);
-
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -104,14 +75,11 @@ const registerUser = async (req, res) => {
   }
 };
 
-// ==============================
 // Login User
-// ==============================
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate required fields
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -119,7 +87,6 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Validate email
     if (!validator.isEmail(email)) {
       return res.status(400).json({
         success: false,
@@ -127,38 +94,21 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Find user including password
     const user = await User.findOne({
       email: email.toLowerCase(),
     }).select("+password");
 
-    if (!user) {
+    if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password.",
       });
     }
 
-    // Compare password
-    const isPasswordMatch = await user.matchPassword(password);
-
-    if (!isPasswordMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password.",
-      });
-    }
-
-    // Generate JWT
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-      },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
+      { expiresIn: "7d" }
     );
 
     return res.status(200).json({
@@ -175,7 +125,6 @@ const loginUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Login Error:", error.message);
-
     return res.status(500).json({
       success: false,
       message: "Internal Server Error.",
@@ -183,9 +132,7 @@ const loginUser = async (req, res) => {
   }
 };
 
-// ==============================
 // Get Profile
-// ==============================
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -197,13 +144,9 @@ const getProfile = async (req, res) => {
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      user,
-    });
+    return res.status(200).json({ success: true, user });
   } catch (error) {
     console.error("Profile Error:", error.message);
-
     return res.status(500).json({
       success: false,
       message: "Internal Server Error.",
@@ -211,10 +154,7 @@ const getProfile = async (req, res) => {
   }
 };
 
-<<<<<<< HEAD
-// ==============================
 // Google OAuth Initiation
-// ==============================
 const googleAuth = (req, res) => {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -225,15 +165,15 @@ const googleAuth = (req, res) => {
   if (!googleClientId) {
     return res.redirect(
       `${frontendUrl}/login?error=${encodeURIComponent(
-        "Google OAuth is not configured yet. Please configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Backend/.env"
+        "Google OAuth is not configured. Configure Google credentials in Backend/.env."
       )}`
     );
   }
 
-  const { role } = req.query;
-  const state = JSON.stringify({ role: role || "student" });
+  const state = JSON.stringify({
+    role: req.query.role === "faculty" ? "faculty" : "student",
+  });
 
-  const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
   const params = new URLSearchParams({
     client_id: googleClientId,
     redirect_uri: redirectUri,
@@ -244,28 +184,22 @@ const googleAuth = (req, res) => {
     state,
   });
 
-  return res.redirect(`${rootUrl}?${params.toString()}`);
+  return res.redirect(
+    `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+  );
 };
 
-// ==============================
 // Google OAuth Callback
-// ==============================
 const googleCallback = async (req, res) => {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const { code, error, state } = req.query;
 
-  if (error) {
+  if (error || !code) {
     return res.redirect(
       `${frontendUrl}/login?error=${encodeURIComponent(
-        "Google sign-in was canceled or access was denied."
-      )}`
-    );
-  }
-
-  if (!code) {
-    return res.redirect(
-      `${frontendUrl}/login?error=${encodeURIComponent(
-        "Authorization code was not received from Google."
+        error
+          ? "Google sign-in was canceled or access was denied."
+          : "Authorization code was not received from Google."
       )}`
     );
   }
@@ -285,37 +219,32 @@ const googleCallback = async (req, res) => {
       );
     }
 
-    // Exchange authorization code for tokens
     const tokenResponse = await axios.post(
       "https://oauth2.googleapis.com/token",
-      {
+      new URLSearchParams({
         code,
         client_id: googleClientId,
         client_secret: googleClientSecret,
         redirect_uri: redirectUri,
         grant_type: "authorization_code",
-      },
+      }).toString(),
       {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
       }
     );
 
-    const { access_token } = tokenResponse.data;
-
-    // Fetch user details from Google
+    const accessToken = tokenResponse.data.access_token;
     const userInfoResponse = await axios.get(
       "https://www.googleapis.com/oauth2/v3/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
-    const googleUser = userInfoResponse.data;
-    const { sub: googleId, email, name, picture } = googleUser;
+    const {
+      sub: googleId,
+      email,
+      name,
+      picture,
+    } = userInfoResponse.data;
 
     if (!email) {
       return res.redirect(
@@ -325,42 +254,36 @@ const googleCallback = async (req, res) => {
       );
     }
 
-    // Determine target role from state if provided
     let requestedRole = "student";
+
     try {
-      if (state) {
-        const parsedState = JSON.parse(state);
-        if (parsedState?.role && ["student", "faculty"].includes(parsedState.role)) {
-          requestedRole = parsedState.role;
-        }
+      const parsedState = JSON.parse(state || "{}");
+      if (["student", "faculty"].includes(parsedState.role)) {
+        requestedRole = parsedState.role;
       }
     } catch {
-      // Ignore state parsing errors
+      // Use student as the safe default.
     }
 
-    // Find existing user by googleId or email
     let user = await User.findOne({
-      $or: [
-        { googleId },
-        { email: email.toLowerCase() },
-      ],
+      $or: [{ googleId }, { email: email.toLowerCase() }],
     });
 
     if (user) {
-      let isModified = false;
+      let changed = false;
+
       if (!user.googleId) {
         user.googleId = googleId;
-        isModified = true;
+        changed = true;
       }
+
       if (!user.profileImage && picture) {
         user.profileImage = picture;
-        isModified = true;
+        changed = true;
       }
-      if (isModified) {
-        await user.save();
-      }
+
+      if (changed) await user.save();
     } else {
-      // Create new user authenticated via Google
       user = await User.create({
         fullName: name || email.split("@")[0],
         email: email.toLowerCase(),
@@ -371,40 +294,29 @@ const googleCallback = async (req, res) => {
       });
     }
 
-    // Generate JWT
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-      },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
+      { expiresIn: "7d" }
     );
 
-    return res.redirect(`${frontendUrl}/login?token=${token}`);
+    return res.redirect(
+      `${frontendUrl}/login?token=${encodeURIComponent(token)}`
+    );
   } catch (err) {
     console.error("Google Callback Error:", err?.response?.data || err.message);
-    const message =
-      err?.response?.data?.error_description ||
-      err.message ||
-      "Failed to authenticate with Google.";
     return res.redirect(
-      `${frontendUrl}/login?error=${encodeURIComponent(message)}`
+      `${frontendUrl}/login?error=${encodeURIComponent(
+        "Failed to authenticate with Google."
+      )}`
     );
   }
 };
 
-=======
->>>>>>> origin/main
 module.exports = {
   registerUser,
   loginUser,
   getProfile,
-<<<<<<< HEAD
   googleAuth,
   googleCallback,
-=======
->>>>>>> origin/main
 };
