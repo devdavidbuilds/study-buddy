@@ -1,0 +1,692 @@
+/* ========================================
+   FACULTY SUBMISSIONS & EVALUATION
+   ======================================== */
+
+.fsub-root {
+  animation: fadeInUp 0.35s ease-out;
+}
+
+/* ── Header ── */
+.fsub-header {
+  margin-bottom: var(--space-4);
+}
+
+.fsub-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+  background: var(--color-accent-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: var(--space-4);
+}
+
+.fsub-back-btn:hover {
+  background: rgba(231, 84, 128, 0.18);
+}
+
+.fsub-page-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.fsub-page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+/* ── Breadcrumb ── */
+.fsub-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+}
+
+.fsub-crumb {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.fsub-crumb.active {
+  color: #6366f1;
+  font-weight: var(--font-weight-semibold);
+  cursor: default;
+}
+
+.fsub-crumb-sep {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ========================================
+   COURSE GRID (Step 1)
+   ======================================== */
+.fsub-course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+.fsub-course-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.fsub-course-card:hover {
+  border-color: var(--border-color-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.fsub-course-thumb {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.fsub-course-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fsub-course-info h3 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsub-course-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--font-size-xs);
+  color: var(--color-accent);
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.fsub-course-arrow {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ========================================
+   ASSIGNMENT LIST (Step 2)
+   ======================================== */
+.fsub-assignment-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fsub-assignment-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.fsub-assignment-card:hover {
+  border-color: var(--border-color-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.fsub-assignment-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.fsub-assignment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fsub-assignment-info h3 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.fsub-assignment-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.fsub-assignment-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ========================================
+   STATUS BADGES
+   ======================================== */
+.fsub-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.fsub-status-evaluated {
+  background: var(--color-success-muted);
+  color: var(--color-success);
+}
+
+.fsub-status-pending {
+  background: var(--color-warning-muted);
+  color: var(--color-warning);
+}
+
+.fsub-status-published {
+  background: var(--color-success-muted);
+  color: var(--color-success);
+}
+
+.fsub-status-draft {
+  background: rgba(148, 142, 136, 0.12);
+  color: var(--text-tertiary);
+}
+
+.fsub-status-closed {
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+}
+
+/* ========================================
+   SUMMARY ROW (Step 3)
+   ======================================== */
+.fsub-summary-row {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.fsub-summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  min-width: 120px;
+}
+
+.fsub-summary-value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.fsub-summary-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.fsub-summary-pending .fsub-summary-value {
+  color: var(--color-warning);
+}
+
+.fsub-summary-evaluated .fsub-summary-value {
+  color: var(--color-success);
+}
+
+/* ========================================
+   SUBMISSION LIST (Step 3)
+   ======================================== */
+.fsub-submission-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fsub-submission-row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1.2fr auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.fsub-submission-row:hover {
+  border-color: var(--border-color-hover);
+}
+
+.fsub-submission-student {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.fsub-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+}
+
+.fsub-student-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsub-student-email {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsub-submission-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.fsub-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-muted);
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.fsub-open-btn:hover {
+  background: rgba(231, 84, 128, 0.18);
+}
+
+/* ========================================
+   STATES — Loading, Error, Empty
+   ======================================== */
+.fsub-loading-state,
+.fsub-error-state,
+.fsub-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) var(--space-6);
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.fsub-loader {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 3px solid var(--color-primary-muted);
+  border-top-color: var(--color-accent);
+  animation: spin 0.8s linear infinite;
+}
+
+.fsub-loading-state p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+.fsub-error-state svg {
+  color: var(--color-danger);
+}
+
+.fsub-error-state h3,
+.fsub-empty-state h3 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.fsub-error-state p,
+.fsub-empty-state p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  max-width: 360px;
+}
+
+.fsub-empty-icon {
+  color: var(--color-primary);
+  opacity: 0.5;
+}
+
+.fsub-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.fsub-retry-btn:hover {
+  background: rgba(226, 104, 94, 0.2);
+}
+
+.fsub-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ========================================
+   MODAL — Open Submission / Evaluate
+   ======================================== */
+.fsub-modal {
+  max-width: 620px;
+}
+
+.fsub-modal-close {
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.fsub-modal-close:hover {
+  color: var(--text-primary);
+  background: var(--color-primary-muted);
+}
+
+.fsub-modal-meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  margin-bottom: var(--space-5);
+}
+
+.fsub-modal-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.fsub-modal-meta-label {
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+}
+
+.fsub-modal-section {
+  margin-bottom: var(--space-5);
+}
+
+.fsub-modal-section-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.fsub-answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fsub-answer-block {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated, rgba(0, 0, 0, 0.02));
+  border: 1px solid var(--border-color);
+}
+
+.fsub-answer-question {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.fsub-answer-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  line-height: var(--line-height-relaxed);
+}
+
+.fsub-answer-freeform {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated, rgba(0, 0, 0, 0.02));
+  border: 1px solid var(--border-color);
+}
+
+.fsub-muted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.fsub-marks-input {
+  width: 160px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.fsub-marks-input:focus {
+  border-color: var(--border-color-active);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+.fsub-feedback-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  resize: vertical;
+  font-family: inherit;
+}
+
+.fsub-feedback-input:focus {
+  border-color: var(--border-color-active);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+.fsub-field-error {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: var(--space-1);
+}
+
+.fsub-message {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.fsub-message-error {
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+}
+
+.fsub-message-success {
+  background: var(--color-success-muted);
+  color: var(--color-success);
+}
+
+.fsub-cancel-btn {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.fsub-cancel-btn:hover {
+  background: var(--color-primary-muted);
+}
+
+.fsub-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--gradient-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.fsub-save-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  opacity: 0.92;
+}
+
+.fsub-save-btn:disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+  .fsub-submission-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .fsub-open-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .fsub-modal-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================
+   DARK THEME SUPPORT
+   ======================================== */
+[data-theme="dark"] .fsub-course-card,
+[data-theme="dark"] .fsub-assignment-card,
+[data-theme="dark"] .fsub-submission-row,
+[data-theme="dark"] .fsub-summary-stat {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .fsub-marks-input,
+[data-theme="dark"] .fsub-feedback-input {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .fsub-answer-block,
+[data-theme="dark"] .fsub-answer-freeform {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border-color);
+}

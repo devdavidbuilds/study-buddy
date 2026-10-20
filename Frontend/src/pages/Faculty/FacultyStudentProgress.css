@@ -1,0 +1,756 @@
+/* ========================================
+   FACULTY STUDENT PROGRESS + ANALYTICS
+   ======================================== */
+
+.fsp-root {
+  animation: fadeInUp 0.35s ease-out;
+}
+
+/* ── Header ── */
+.fsp-header {
+  margin-bottom: var(--space-4);
+}
+
+.fsp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+  background: var(--color-accent-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: var(--space-4);
+}
+
+.fsp-back-btn:hover {
+  background: rgba(231, 84, 128, 0.18);
+}
+
+.fsp-page-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.fsp-page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+/* ── Breadcrumb ── */
+.fsp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+}
+
+.fsp-crumb {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.fsp-crumb.active {
+  color: #6366f1;
+  font-weight: var(--font-weight-semibold);
+  cursor: default;
+}
+
+.fsp-crumb-sep {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ========================================
+   COURSE GRID (Step 1)
+   ======================================== */
+.fsp-course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+.fsp-course-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.fsp-course-card:hover {
+  border-color: var(--border-color-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.fsp-course-thumb {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.fsp-course-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fsp-course-info h3 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsp-course-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--font-size-xs);
+  color: var(--color-accent);
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.fsp-course-arrow {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ========================================
+   STAT CARDS (course + student detail)
+   ======================================== */
+.fsp-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.fsp-stat-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+}
+
+.fsp-stat-card > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fsp-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fsp-icon-blue { background: rgba(99, 132, 241, 0.12); color: #6384f1; }
+.fsp-icon-green { background: var(--color-success-muted); color: var(--color-success); }
+.fsp-icon-purple { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+.fsp-icon-amber { background: var(--color-warning-muted); color: var(--color-warning); }
+.fsp-icon-teal { background: rgba(45, 178, 168, 0.12); color: #2db2a8; }
+.fsp-icon-pink { background: var(--color-accent-muted); color: var(--color-accent); }
+
+.fsp-stat-value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.fsp-stat-value-sm {
+  font-size: var(--font-size-sm);
+}
+
+.fsp-stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========================================
+   ANALYTICS CHARTS
+   ======================================== */
+.fsp-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.fsp-chart-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+}
+
+.fsp-chart-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.fsp-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.fsp-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-muted);
+  color: var(--color-warning);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-5);
+}
+
+/* ========================================
+   STUDENT LIST (Step 2)
+   ======================================== */
+.fsp-students-section {
+  margin-top: var(--space-2);
+}
+
+.fsp-students-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.fsp-students-header h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.fsp-count-badge {
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-muted);
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.fsp-search-input {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  min-width: 220px;
+}
+
+.fsp-search-input:focus {
+  border-color: var(--border-color-active);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
+}
+
+.fsp-student-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fsp-student-row {
+  display: grid;
+  grid-template-columns: 1.8fr 1.1fr 1.4fr 1fr auto auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  width: 100%;
+}
+
+.fsp-student-row:hover {
+  border-color: var(--border-color-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.fsp-student-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.fsp-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+}
+
+.fsp-avatar-lg {
+  width: 52px;
+  height: 52px;
+  font-size: var(--font-size-md);
+}
+
+.fsp-student-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fsp-student-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsp-student-email {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsp-student-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fsp-progress-pct {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
+.fsp-student-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.fsp-student-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fsp-student-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* ========================================
+   STATUS BADGES
+   ======================================== */
+.fsp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.fsp-status-completed {
+  background: var(--color-success-muted);
+  color: var(--color-success);
+}
+
+.fsp-status-in-progress {
+  background: var(--color-warning-muted);
+  color: var(--color-warning);
+}
+
+.fsp-status-not-started {
+  background: rgba(148, 142, 136, 0.12);
+  color: var(--text-tertiary);
+}
+
+/* ========================================
+   STUDENT DETAIL (Step 3)
+   ======================================== */
+.fsp-detail-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  margin-bottom: var(--space-5);
+}
+
+.fsp-detail-identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fsp-detail-identity h2 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.fsp-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+
+.fsp-detail-section {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+}
+
+.fsp-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.fsp-inline-empty {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  font-style: italic;
+  padding: var(--space-3) 0;
+}
+
+/* Completed lessons list */
+.fsp-lesson-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.fsp-lesson-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-success-muted);
+}
+
+.fsp-lesson-check {
+  color: var(--color-success);
+  flex-shrink: 0;
+}
+
+.fsp-lesson-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fsp-lesson-date {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+/* Assignment detail list */
+.fsp-assignment-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.fsp-assignment-detail-item {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated, rgba(0, 0, 0, 0.02));
+  border: 1px solid var(--border-color);
+}
+
+.fsp-assignment-detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.fsp-assignment-detail-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.fsp-assignment-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+
+.fsp-assignment-detail-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.fsp-assignment-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border-color);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Recent activity feed */
+.fsp-activity-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.fsp-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.fsp-activity-dot {
+  color: var(--color-accent);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.fsp-activity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+}
+
+.fsp-activity-time {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+
+/* ========================================
+   STATES — Loading, Error, Empty
+   ======================================== */
+.fsp-loading-state,
+.fsp-error-state,
+.fsp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) var(--space-6);
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.fsp-loader {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 3px solid var(--color-primary-muted);
+  border-top-color: var(--color-accent);
+  animation: spin 0.8s linear infinite;
+}
+
+.fsp-loading-state p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+.fsp-error-state svg {
+  color: var(--color-danger);
+}
+
+.fsp-error-state h3,
+.fsp-empty-state h3 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.fsp-error-state p,
+.fsp-empty-state p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  max-width: 360px;
+}
+
+.fsp-empty-icon {
+  color: var(--color-primary);
+  opacity: 0.5;
+}
+
+.fsp-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-muted);
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.fsp-retry-btn:hover {
+  background: rgba(226, 104, 94, 0.2);
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 900px) {
+  .fsp-student-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .fsp-student-row .fsp-course-arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .fsp-students-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fsp-search-input {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+/* ========================================
+   DARK THEME SUPPORT
+   ======================================== */
+[data-theme="dark"] .fsp-course-card,
+[data-theme="dark"] .fsp-stat-card,
+[data-theme="dark"] .fsp-chart-card,
+[data-theme="dark"] .fsp-student-row,
+[data-theme="dark"] .fsp-detail-header,
+[data-theme="dark"] .fsp-detail-section {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .fsp-search-input {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .fsp-assignment-detail-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .fsp-lesson-item {
+  background: rgba(106, 204, 133, 0.1);
+}

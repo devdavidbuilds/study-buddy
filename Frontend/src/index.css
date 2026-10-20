@@ -1,0 +1,5 @@
+/* Import design system — all tokens, resets, and base styles live there */
+@import './styles/index.css';
+@import './styles/components.css';
+@import './styles/layout.css';
+@import './styles/pages.css';
