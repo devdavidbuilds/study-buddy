@@ -23,12 +23,22 @@ connectDB();
 
 const app = express();
 
-const allowedOrigins = (
-  process.env.FRONTEND_URLS || "http://localhost:5173"
-)
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+// Exact origins only. The production domain is always allowed so a missing or
+// mistyped FRONTEND_URLS on Render cannot block login; FRONTEND_URL (the
+// OAuth redirect target) is the frontend too, so it is allowed as well.
+const PRODUCTION_FRONTEND = "https://study-buddy-tau-ochre.vercel.app";
+
+const allowedOrigins = [
+  ...new Set(
+    [
+      ...(process.env.FRONTEND_URLS || "http://localhost:5173").split(","),
+      process.env.FRONTEND_URL || "",
+      PRODUCTION_FRONTEND,
+    ]
+      .map((origin) => origin.trim().replace(/^["']|["']$/g, "").replace(/\/+$/, ""))
+      .filter(Boolean)
+  ),
+];
 
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: "256kb" }));
