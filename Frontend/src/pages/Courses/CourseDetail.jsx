@@ -22,7 +22,8 @@ import ProgressBar from '../../components/ui/ProgressBar';
 import ProgressRing from '../../components/ui/ProgressRing';
 import PageState from '../../components/ui/PageState';
 import LectureMaterials from '../../components/course/LectureMaterials';
-import { getCourse, getCourses } from '../../api/courseApi';
+import { getCourse } from '../../api/courseApi';
+import { getRecommendations } from '../../api/recommendationApi';
 import { getCourseProgress } from '../../api/progressApi';
 import { logCourseOpened } from '../../api/activityApi';
 import { getLessonMinutes, formatMinutes } from '../../utils/lessonAssignment';
@@ -52,12 +53,10 @@ export default function CourseDetail() {
   const loadCourse = async () => {
     setLoading(true);
     setError('');
+    setRelatedCourses([]);
 
     try {
-      const [courseRes, allCourses] = await Promise.all([
-        getCourse(id),
-        getCourses(),
-      ]);
+      const courseRes = await getCourse(id);
 
       const selectedCourse =
         courseRes?.data?.data ??
@@ -66,15 +65,15 @@ export default function CourseDetail() {
 
       setCourse(selectedCourse);
 
-      const list = Array.isArray(allCourses?.data?.data)
-        ? allCourses.data.data
-        : [];
-
-      setRelatedCourses(
-        list
-          .filter((c) => c._id !== selectedCourse?._id)
-          .slice(0, 3)
-      );
+      // Similar courses from the ML recommender (TF-IDF + cosine
+      // similarity). Non-blocking; if the recommendation service is
+      // unavailable the Related Courses card is simply not shown.
+      getRecommendations({ courseId: id, limit: 5 })
+        .then((res) => {
+          const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+          setRelatedCourses(list.filter((c) => c._id !== id));
+        })
+        .catch(() => setRelatedCourses([]));
 
       // Fetch this student's own persisted progress for this course
       // (does not affect other students, and never touches the shared
@@ -1457,6 +1456,9 @@ export default function CourseDetail() {
                           •{' '}
                           {relatedCourse.duration ||
                             '4 weeks'}
+                          {typeof relatedCourse.score === 'number' && (
+                            <> • {Math.round(relatedCourse.score * 100)}% match</>
+                          )}
                         </span>
 
                       </div>

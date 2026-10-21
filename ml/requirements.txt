@@ -1,0 +1,3 @@
+# CPU-only. scikit-learn brings numpy, scipy and joblib with it.
+# Pinned because saved joblib models are tied to the scikit-learn version.
+scikit-learn==1.7.1
