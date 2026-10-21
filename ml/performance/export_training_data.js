@@ -8,6 +8,9 @@
 // courses are replaced by run-local labels (s1, s2, c1, ...); no names,
 // emails, ids, answers or feedback are exported — only assessment
 // percentages, timestamps, lesson-completion timestamps and lesson counts.
+// Records from seeded demo accounts (emails @demo.studybuddy.in, created by
+// Backend/scripts/seedDemoData.js) are marked "demo": true so training can
+// keep simulated history apart from real students. Emails are not exported.
 // Uses Backend/.env for MONGODB_URI; the URI is never printed.
 
 const fs = require("fs");
@@ -18,6 +21,7 @@ require(path.join(BACKEND, "node_modules", "dotenv")).config({ path: path.join(B
 const mongoose = require(path.join(BACKEND, "node_modules", "mongoose"));
 
 const OUTPUT = path.join(__dirname, "data", "real_history.json");
+const DEMO_EMAIL = /@demo\.studybuddy\.in$/i;
 
 const main = async () => {
   const dbArg = process.argv.indexOf("--db");
@@ -42,6 +46,15 @@ const main = async () => {
       },
     })
     .toArray();
+
+  const userIds = [...new Set(progress.map((p) => String(p.user)))]
+    .filter((id) => mongoose.isValidObjectId(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+  const demoUsers = new Set(
+    (await db.collection("users").find({ _id: { $in: userIds } }, { projection: { email: 1 } }).toArray())
+      .filter((u) => DEMO_EMAIL.test(u.email || ""))
+      .map((u) => String(u._id))
+  );
 
   // Lesson counts for just these courses (not the whole catalog).
   const courseIds = [...new Set(progress.map((p) => String(p.course)))]
@@ -70,6 +83,7 @@ const main = async () => {
 
   const records = progress.map((p) => ({
     student: studentLabel(p.user),
+    demo: demoUsers.has(String(p.user)),
     course: courseLabel(p.course),
     total_lessons: lessonCounts.get(String(p.course)) || 0,
     completed_at: (p.completedLessons || []).map((l) => iso(l.completedAt)).filter(Boolean),
@@ -81,15 +95,16 @@ const main = async () => {
     ].filter((a) => a.at && typeof a.score === "number"),
   }));
 
-  const assessments = records.reduce((n, r) => n + r.assessments.length, 0);
   fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
   fs.writeFileSync(
     OUTPUT,
     JSON.stringify({ source: "real", exported_at: new Date().toISOString(), database: mongoose.connection.name, records }, null, 1)
   );
 
-  console.log(`database ${mongoose.connection.name}: ${records.length} progress records, ` +
-    `${new Set(records.map((r) => r.student)).size} students, ${assessments} assessments`);
+  for (const [label, subset] of [["real", records.filter((r) => !r.demo)], ["demo", records.filter((r) => r.demo)]]) {
+    console.log(`database ${mongoose.connection.name} [${label}]: ${subset.length} progress records, ` +
+      `${new Set(subset.map((r) => r.student)).size} students, ${subset.reduce((n, r) => n + r.assessments.length, 0)} assessments`);
+  }
   console.log(`wrote ${OUTPUT}`);
   await mongoose.disconnect();
 };

@@ -8,12 +8,14 @@ neural network, no pretrained model, no external API.
 This module is **standalone**: it is not connected to the backend, the
 frontend or the course recommender (`ml/recommender.py` is unchanged).
 
-> **Status (2026-10-21): there is not enough real data yet.** The Study
-> Buddy database holds 0 quiz attempts and 1 lesson check in total (2
-> students with any activity). The real-data path is built and tested, but
-> it refuses to train until there are at least 50 assessments from 10
-> students. Until then the demo uses a clearly labelled **synthetic**
-> dataset, which only shows that the software works.
+> **Status (2026-10-21): there is not enough real student data yet.** Real
+> students have 0 quiz attempts and 1 lesson check, so `--real` refuses to
+> train (it needs at least 50 assessments from 10 students). For the
+> demonstration, the app now holds 15 seeded **demo accounts**
+> (`@demo.studybuddy.in`, created by `Backend/scripts/seedDemoData.js`) with
+> *simulated* learning history; `--demo` trains on those records only. A
+> separate **synthetic** dataset still exists for software tests. Neither
+> is evidence about real students, and every output says which one it used.
 
 ## Features and target
 
@@ -58,17 +60,22 @@ training scores, predictions always stay within 0–100. Missing values (for
 example, a new student with no earlier quizzes) are filled with the training
 median, and a flag tells the trees that the value was missing.
 
-## Data sources: real and synthetic are kept separate
+## Data sources: real, demo and synthetic are kept separate
 
-| | Real | Synthetic |
-|---|---|---|
-| Created by | `node ml\performance\export_training_data.js` (read-only) | `synthetic_data.py` (fixed formula, seed 7) |
-| Stored in | `data\real_history.json` | `data\SYNTHETIC_demo_dataset.csv` (every row says `source=synthetic`) |
-| Train with | `train_model.py --real` | `train_model.py --synthetic` |
-| Model file | `artifacts\performance_real.joblib` | `artifacts\performance_synthetic.joblib` |
+| | Real students | Demo accounts | Synthetic |
+|---|---|---|---|
+| Comes from | the database, via `node ml\performance\export_training_data.js` (read-only) | the same export, records marked `"demo": true` | `synthetic_data.py` (fixed formula, seed 7) |
+| What it is | real learners' history | simulated history of seeded `@demo.studybuddy.in` accounts | rows from a formula |
+| Train with | `train_model.py --real` | `train_model.py --demo` | `train_model.py --synthetic` |
+| Model file | `artifacts\performance_real.joblib` | `artifacts\performance_demo.joblib` | `artifacts\performance_synthetic.joblib` |
 
-Each run uses exactly one source; the real loader rejects any file not
-marked `"source": "real"`. The export replaces students and courses with
+Each run uses exactly one source; the loader rejects any export not marked
+`"source": "real"`, `--real` drops every demo record and `--demo` keeps only
+them. The demo accounts' scores come from a simple simulation in
+`Backend/scripts/seedDemoData.js` (a per-student ability, a per-course
+difficulty and a small practice effect, plus noise), so a model trained on
+them learns that simulation: it demonstrates the pipeline end to end on
+data stored in the app, not real student behaviour. The export replaces students and courses with
 labels (`s1`, `c1`, …) and contains only scores, timestamps and lesson
 counts — no names, emails, ids, answers or feedback. `data/` and
 `artifacts/` are git-ignored, so exported student data is never committed.
@@ -121,17 +128,19 @@ python ml\performance\demo.py --avg 45 --attempts 6 --completion 30 --last 40
 python ml\performance\demo.py --attempts 0 --completion 10
 ```
 
-Real data, once students have quiz history. It reads MongoDB through
-`Backend\.env` and never writes to it:
+Data from the app (reads MongoDB through `Backend\.env`, never writes):
 
 ```bat
 node ml\performance\export_training_data.js
+python ml\performance\train_model.py --demo
 python ml\performance\train_model.py --real
 ```
 
-With today's data this prints "Not trained: only 1 assessment rows from 1
-students …", which is the intended behaviour. When a real model exists,
-`demo.py` uses it automatically (`--synthetic` forces the demo model).
+`--demo` trains on the seeded demo accounts. `--real` currently prints
+"Not trained: only 1 assessment rows from 1 students …", which is the
+intended behaviour until real students build up history. `demo.py` uses
+the real model if one exists, then the demo model, then the synthetic one;
+`--source real|demo|synthetic` picks one explicitly.
 
 ## Limitations
 

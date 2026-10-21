@@ -1,11 +1,13 @@
 """Train the student performance model (RandomForestRegressor).
 
-Exactly one data source per run; real and synthetic data are never mixed:
+Exactly one data source per run; sources are never mixed:
 
-    python ml\\performance\\train_model.py --real        trains on data\\real_history.json
+    python ml\\performance\\train_model.py --real        real students in data\\real_history.json
                                                         (made by export_training_data.js)
-    python ml\\performance\\train_model.py --synthetic   trains on the labelled SYNTHETIC
-                                                        demo dataset (software demo only)
+    python ml\\performance\\train_model.py --demo        only the seeded DEMO accounts in that file
+                                                        (simulated history from seedDemoData.js)
+    python ml\\performance\\train_model.py --synthetic   the labelled SYNTHETIC dataset
+                                                        (software demo only)
 
 Evaluation: 20% of the rows are held out (split by student when possible, so
 one student's quizzes are not in both halves; seed 42). MAE and R^2 are
@@ -43,7 +45,9 @@ class InsufficientDataError(RuntimeError):
     pass
 
 
-def load_real(path=REAL_HISTORY):
+def load_real(path=REAL_HISTORY, demo=False):
+    """Rows from the export: real students only, or (demo=True) only the
+    seeded demo accounts. The two are never combined."""
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"{path} not found. Export it first: node ml\\performance\\export_training_data.js")
@@ -51,8 +55,10 @@ def load_real(path=REAL_HISTORY):
         payload = json.load(handle)
     if not isinstance(payload, dict) or payload.get("source") != "real":
         raise ValueError(f'{path} is not a real-data export (expected "source": "real")')
-    rows, targets, groups, skipped = build_training_rows(payload.get("records"))
-    return rows, targets, groups, {"file": path.name, "database": payload.get("database"), "skipped": skipped}
+    records = [r for r in payload.get("records") or [] if isinstance(r, dict) and bool(r.get("demo")) == demo]
+    rows, targets, groups, skipped = build_training_rows(records)
+    return rows, targets, groups, {"file": path.name, "database": payload.get("database"), "skipped": skipped,
+                                   "records": "demo accounts" if demo else "real students"}
 
 
 def split(rows, targets, groups):
@@ -87,7 +93,7 @@ def evaluate(model, train_targets, test_rows, test_targets) -> dict:
 
 def train(rows, targets, groups, source: str, data_info: dict, save=True, n_estimators=100, verbose=True):
     students = len(set(groups))
-    if source == "real" and (len(rows) < MIN_REAL_ROWS or students < MIN_REAL_STUDENTS):
+    if source in ("real", "demo") and (len(rows) < MIN_REAL_ROWS or students < MIN_REAL_STUDENTS):
         raise InsufficientDataError(
             f"Only {len(rows)} assessment rows from {students} students; need at least {MIN_REAL_ROWS} rows "
             f"from {MIN_REAL_STUDENTS} students for a meaningful model. No model was trained."
@@ -120,6 +126,8 @@ def main(argv=None) -> int:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--real", nargs="?", const=str(REAL_HISTORY), metavar="HISTORY_JSON",
                         help="train on real exported history (default data\\real_history.json)")
+    source.add_argument("--demo", nargs="?", const=str(REAL_HISTORY), metavar="HISTORY_JSON",
+                        help="train only on the seeded demo accounts in the export (simulated history)")
     source.add_argument("--synthetic", action="store_true", help="train on the SYNTHETIC demo dataset")
     parser.add_argument("--trees", type=int, default=100, help="number of trees (default 100)")
     args = parser.parse_args(argv)
@@ -133,6 +141,12 @@ def main(argv=None) -> int:
             train(rows, targets, groups, "synthetic", {"file": csv_path.name, "generator": "synthetic_data.py"},
                   n_estimators=args.trees)
             print("  NOTE: these metrics only show the code works; they are not evidence about real students.")
+        elif args.demo:
+            print(f"Training on DEMO-ACCOUNT history (simulated, not real students): {args.demo}")
+            rows, targets, groups, info = load_real(args.demo, demo=True)
+            print(f"  built {len(rows)} leakage-free rows ({info['skipped']} skipped)")
+            train(rows, targets, groups, "demo", info, n_estimators=args.trees)
+            print("  NOTE: demo accounts follow a simulation; these metrics describe that simulation, not real students.")
         else:
             print(f"Training on REAL exported history: {args.real}")
             rows, targets, groups, info = load_real(args.real)

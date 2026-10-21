@@ -4,8 +4,9 @@
     python ml\\performance\\demo.py --avg 72 --attempts 3 --completion 60 --last 80
     python ml\\performance\\demo.py --attempts 0 --completion 10      (new student)
 
-Uses the real-data model if one has been trained, otherwise the SYNTHETIC
-demo model (with a warning). The prediction comes from the saved model; it is
+Uses the real-student model if one has been trained, then the demo-account
+model, then the SYNTHETIC model (with a warning for the last two); --source
+picks one explicitly. The prediction comes from the saved model; it is
 an estimate, not a guaranteed score.
 """
 
@@ -30,16 +31,16 @@ def main(argv=None) -> int:
     parser.add_argument("--attempts", type=int, required=True, help="number of previous quiz attempts")
     parser.add_argument("--completion", type=float, help="course completion percentage, 0-100")
     parser.add_argument("--last", type=float, help="most recent quiz score, 0-100 (optional)")
-    parser.add_argument("--synthetic", action="store_true", help="use the synthetic model even if a real one exists")
+    parser.add_argument("--source", choices=["real", "demo", "synthetic"], help="which trained model to use")
     args = parser.parse_args(argv)
 
     features = {"prev_quiz_avg": args.avg, "prev_attempts": args.attempts,
                 "completion_pct": args.completion, "last_quiz_score": args.last}
 
-    real, synthetic = artifact_path("real"), artifact_path("synthetic")
-    path = real if real.exists() and not args.synthetic else synthetic if synthetic.exists() else None
+    order = [args.source] if args.source else ["real", "demo", "synthetic"]
+    path = next((artifact_path(s) for s in order if artifact_path(s).exists()), None)
     if path is None:
-        print("No trained model found. Train one first:\n  python ml\\performance\\train_model.py --synthetic")
+        print("No trained model found. Train one first, e.g.:\n  python ml\\performance\\train_model.py --synthetic")
         return 1
     model = PerformanceModel.load(path)
     meta = model.metadata
@@ -49,6 +50,10 @@ def main(argv=None) -> int:
         print("\n  WARNING: this model was trained ONLY on SYNTHETIC demonstration data.")
         print("  It shows how the software works; the number below is not evidence")
         print("  about any real student.\n")
+    elif meta["source"] == "demo":
+        print("\n  NOTE: this model was trained on the SIMULATED learning history of the")
+        print("  seeded demo accounts (@demo.studybuddy.in), not on real students.")
+        print("  It demonstrates the full pipeline on data stored in the app.\n")
 
     print("Input features:")
     for name in FEATURES:
@@ -64,12 +69,12 @@ def main(argv=None) -> int:
     m = meta.get("metrics", {})
     print(f"\nPredicted next quiz score: {predicted} / 100")
     if m.get("mae") is not None:
-        print(f"  typical error on held-out {'real' if meta['source'] == 'real' else 'synthetic'} data: "
+        print(f"  typical error on held-out { {'real': 'real', 'demo': 'demo-account'}.get(meta['source'], 'synthetic') } data: "
               f"about +/- {m['mae']} points (MAE)")
     print("  This is an estimate from past patterns, not a guaranteed result.")
 
     print(f"\nModel: trained {meta.get('trained_at')} on {meta.get('n_train')} {meta['source']} rows "
-          f"({meta.get('students')} {'students' if meta['source'] == 'real' else 'made-up students'})")
+          f"({meta.get('students')} {'students' if meta['source'] == 'real' else 'demo accounts' if meta['source'] == 'demo' else 'made-up students'})")
     print(f"  held-out test rows: {m.get('n_test')}, MAE {m.get('mae')}, R^2 {m.get('r2')}")
     print(f"  baselines MAE: training average {m.get('baseline_mae_train_average')}, "
           f"previous average {m.get('baseline_mae_previous_average')}")

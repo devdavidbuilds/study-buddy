@@ -289,4 +289,11 @@ const courseSchema = new mongoose.Schema(
   }
 );
 
+// The catalog list sorts by these fields (courseController.getAllCourses).
+// Without an index MongoDB sorts full course documents in memory and fails
+// past its 32 MB limit on later pages.
+courseSchema.index({ createdAt: -1 });
+courseSchema.index({ rating: -1, createdAt: -1 });
+courseSchema.index({ students: -1, createdAt: -1 });
+
 module.exports = mongoose.model("Course", courseSchema);

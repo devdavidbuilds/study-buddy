@@ -58,7 +58,7 @@ course fields ──► one text document per course
                TfidfVectorizer  (fit once on all courses)
                     │  words + two-word phrases, stop words removed
                     ▼
-               sparse matrix  3,672 courses × 14,593 terms  (0.1% non-zero, ~0.5 MB)
+               sparse matrix  3,672 courses × ~15,700 terms  (sparse, ~1 MB)
 
 query text  ──► same vectorizer.transform  ──► 1 × 14,600 vector
                                                    │
@@ -101,8 +101,7 @@ computing IDF weights over the catalog; there are no learned weights, no
 embeddings and no gradient descent.
 
 **Why no GPU is needed.** Fitting is one pass over ~2.6 MB of text (~1 s on
-CPU). Each query is a sparse 1 × 14,600 by 14,600 × 3,672 multiplication
-with ~55,000 non-zero values — microseconds of arithmetic. The full 3,672 ×
+CPU). Each query is a sparse 1 × 15,700 by 15,700 × 3,672 multiplication — microseconds of arithmetic. The full 3,672 ×
 3,672 course-to-course matrix (13.5 M floats) is never built; each query
 computes only its own row of scores.
 
@@ -186,15 +185,16 @@ python ml\recommender.py "guitar chords" -k 3
 python ml\test_recommender.py
 ```
 
-Expected output for `Python programming` (trained 2026-10-21):
+Expected output for `Python programming` (trained 2026-10-21, after the
+course content update; scores change whenever the catalog text changes):
 
 ```
    #   Score  Category             Title
-   1   0.637  Web Development      Introduction to QGIS Python Programming
-   2   0.626  Web Development      Python for Beginners: Python Programming Language | Tutorial
-   3   0.449  Web Development      Python Programming: Create an Digital Marketplace in Django
-   4   0.396  Web Development      Python Web Programming
-   5   0.376  Web Development      Web Programming with Python
+   1   0.506  Web Development      Introduction to QGIS Python Programming
+   2   0.384  Web Development      Python Programming: Create an Digital Marketplace in Django
+   3   0.304  Web Development      Python Web Programming
+   4   0.293  Web Development      Web Programming with Python
+   5   0.184  Web Development      Python for Beginners: Python Programming Language | Tutorial
 ```
 
 Full app (three terminals):
@@ -251,7 +251,7 @@ is stopped, existing routes unchanged, frontend production build OK.
   hidden.
 - **The catalog text is thin.** Most courses have only a title and one of 4
   categories as real information, so courses with very short titles can tie
-  (e.g. four Web Development courses scoring 0.873 for "web development").
+  (e.g. several Web Development courses tying for "web development").
 - **No personalisation yet.** It does not use enrolments, progress or ratings.
 - **Snapshot.** New or edited courses are only reflected after retraining
   (new courses can still get "similar courses" from their text).
