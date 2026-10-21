@@ -16,7 +16,7 @@ import {
 import Button from '../../components/ui/Button';
 import GlassCard from '../../components/ui/GlassCard';
 import { register } from '../../api/authApi';
-import { setAuthToken } from '../../api/api';
+import { setAuthToken, unreachableMessage } from '../../api/api';
 import '../Login/Login.css';
 
 const PHONE_PATTERN = /^\+?[0-9\s-]{7,20}$/;
@@ -138,7 +138,7 @@ export default function Signup() {
     } catch (err) {
       setError(
         err?.response?.data?.message ||
-          'Unable to create your account. Please try again.'
+          (err?.response ? 'Unable to create your account. Please try again.' : unreachableMessage())
       );
     } finally {
       setLoading(false);

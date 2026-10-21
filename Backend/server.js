@@ -1,6 +1,13 @@
+const path = require("path");
+const dotenv = require("dotenv");
+
+// Load Backend/.env first — before any module reads process.env — and
+// even when the server is started from another folder
+// (e.g. `node Backend/server.js` from the repo root).
+dotenv.config({ path: path.join(__dirname, ".env") });
+
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 
 const connectDB = require("./config/db");
 
@@ -18,8 +25,6 @@ const aiChatRoutes = require("./routes/aiChat");
 const lectureMaterialRoutes = require("./routes/lectureMaterialRoutes");
 const plannerRoutes = require("./routes/plannerRoutes");
 const certificateRoutes = require("./routes/certificateRoutes");
-
-dotenv.config();
 
 connectDB();
 

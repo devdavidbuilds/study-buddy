@@ -13,7 +13,7 @@ import {
 import Button from '../../components/ui/Button';
 import GlassCard from '../../components/ui/GlassCard';
 import { login } from '../../api/authApi';
-import { setAuthToken } from '../../api/api';
+import { setAuthToken, unreachableMessage } from '../../api/api';
 import './Login.css';
 
 export default function Login() {
@@ -81,7 +81,7 @@ export default function Login() {
       setError(
         err?.response?.data?.message ||
         err?.response?.data?.error ||
-        'Unable to connect to the authentication service.'
+        (err?.response ? 'Unable to sign in right now. Please try again.' : unreachableMessage())
       );
     } finally {
       setLoading(false);
