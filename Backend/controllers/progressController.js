@@ -3,6 +3,7 @@ const CourseProgress = require("../models/CourseProgress");
 const Assignment = require("../models/Assignment");
 const User = require("../models/User");
 const recordActivity = require("../utils/recordActivity");
+const { issueCertificate } = require("../utils/certificates");
 const {
   cleanOriginalName,
   fileUrlFor,
@@ -104,6 +105,12 @@ const getProgress = async (req, res) => {
       progress.completedLessons
     );
 
+    // Also backfills certificates for courses finished before they existed.
+    const certificate =
+      percentage === 100 && totalLessons > 0
+        ? await issueCertificate({ studentId: userId, course, totalLessons })
+        : null;
+
     res.status(200).json({
       success: true,
       data: {
@@ -111,6 +118,7 @@ const getProgress = async (req, res) => {
         completedCount,
         totalLessons,
         percentage,
+        certificate,
       },
     });
   } catch (error) {
@@ -219,6 +227,11 @@ const markLessonComplete = async (req, res) => {
       progress.completedLessons
     );
 
+    const certificate =
+      percentage === 100 && totalLessons > 0
+        ? await issueCertificate({ studentId: userId, course, totalLessons })
+        : null;
+
     res.status(200).json({
       success: true,
       message: alreadyDone
@@ -229,6 +242,7 @@ const markLessonComplete = async (req, res) => {
         completedCount,
         totalLessons,
         percentage,
+        certificate,
       },
     });
   } catch (error) {

@@ -12,6 +12,7 @@ import {
   Clock,
   ClipboardList,
   Award,
+  Download,
   ListChecks,
   Menu,
   Play,
@@ -55,6 +56,7 @@ import { getAssignmentsForLesson } from '../../api/assignmentApi';
 import PdfUploadField from '../../components/assignment/PdfUploadField';
 import { getQuizzesForLesson, submitQuiz } from '../../api/quizApi';
 import { logLessonOpened } from '../../api/activityApi';
+import { downloadCertificate } from '../../api/certificateApi';
 import {
   buildAssignment,
   getKeyConcepts,
@@ -131,6 +133,8 @@ export default function CourseLearn() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState({});
   const [completedPulse, setCompletedPulse] = useState(false);
+  const [downloadingCertificate, setDownloadingCertificate] = useState(false);
+  const [certificateError, setCertificateError] = useState('');
 
   // ==============================
   // Data loading
@@ -640,6 +644,7 @@ export default function CourseLearn() {
         completedCount: data?.completedCount ?? prev?.completedCount,
         totalLessons: data?.totalLessons ?? prev?.totalLessons,
         percentage: data?.percentage ?? prev?.percentage,
+        certificate: data?.certificate ?? prev?.certificate ?? null,
       }));
 
       // Trigger pulse animation
@@ -651,6 +656,20 @@ export default function CourseLearn() {
       );
     } finally {
       setCompleting(false);
+    }
+  };
+
+  const handleDownloadCertificate = async () => {
+    if (!progress?.certificate) return;
+
+    setDownloadingCertificate(true);
+    setCertificateError('');
+    try {
+      await downloadCertificate(progress.certificate);
+    } catch {
+      setCertificateError('Could not download your certificate. Please try again.');
+    } finally {
+      setDownloadingCertificate(false);
     }
   };
 
@@ -764,6 +783,17 @@ export default function CourseLearn() {
                 {progressPercentage}%
               </span>
             </div>
+            {progress?.certificate && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm learn-certificate-btn"
+                onClick={handleDownloadCertificate}
+                disabled={downloadingCertificate}
+              >
+                <Award size={14} />
+                {downloadingCertificate ? 'Preparing…' : 'Download certificate'}
+              </button>
+            )}
             {timeSummary.total > 0 && (
               <div className="sl-time-meta">
                 {formatMinutes(timeSummary.total)} total · {formatMinutes(timeSummary.remaining)} left
@@ -861,6 +891,32 @@ export default function CourseLearn() {
             MAIN CONTENT AREA
             ============================================================ */}
         <div className="learn-main">
+
+          {/* ---- Course completion certificate ---- */}
+          {progress?.certificate && (
+            <GlassCard className="learn-certificate-card">
+              <div className="learn-certificate-icon">
+                <Award size={28} />
+              </div>
+              <div className="learn-certificate-text">
+                <h3>Congratulations, you completed this course! 🎉</h3>
+                <p>
+                  Your certificate of completion for <strong>{progress.certificate.courseName}</strong> is ready.
+                  Certificate ID: {progress.certificate.certificateId}
+                </p>
+                {certificateError && <p className="learn-action-message">{certificateError}</p>}
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleDownloadCertificate}
+                disabled={downloadingCertificate}
+              >
+                <Download size={16} />
+                {downloadingCertificate ? 'Preparing…' : 'Download certificate'}
+              </button>
+            </GlassCard>
+          )}
 
           {/* ---- Video Player ---- */}
           {hasVideo && (

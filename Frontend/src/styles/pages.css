@@ -2808,3 +2808,35 @@
     justify-content: flex-end;
   }
 }
+
+/* ---- Course certificate ---- */
+.learn-certificate-btn { width: 100%; justify-content: center; margin-top: var(--space-3); }
+
+.learn-certificate-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+  border-color: var(--color-primary);
+}
+.learn-certificate-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.learn-certificate-text { flex: 1; min-width: 220px; }
+.learn-certificate-text h3 { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-1); }
+.learn-certificate-text p { font-size: var(--font-size-sm); color: var(--text-secondary); overflow-wrap: anywhere; }
+
+.certificates-list { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-8); }
+.certificate-row { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+.certificate-row-info { flex: 1; min-width: 200px; }
+.certificate-row-info h4 { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); overflow-wrap: anywhere; }
+.certificate-row-info p { font-size: var(--font-size-xs); color: var(--text-tertiary); }
