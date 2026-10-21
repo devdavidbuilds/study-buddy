@@ -16,6 +16,7 @@ const chatbotRoutes = require("./routes/chatbotRoutes");
 const submissionFileRoutes = require("./routes/submissionFileRoutes");
 const aiChatRoutes = require("./routes/aiChat");
 const lectureMaterialRoutes = require("./routes/lectureMaterialRoutes");
+const plannerRoutes = require("./routes/plannerRoutes");
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ app.use("/api/faculty/courses", facultyProgressRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/submissions", submissionFileRoutes);
 app.use("/api/materials", lectureMaterialRoutes);
+app.use("/api/planner", plannerRoutes);
 app.use("/api/ai-chat", aiChatRoutes);
 
 app.use((req, res) => {
