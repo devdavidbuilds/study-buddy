@@ -281,9 +281,12 @@ const checkStatus = async (req, res) => {
     return res.status(200).json({
       success: true,
       judge0Available: available,
-      message: available
-        ? "Judge0 API is connected and ready."
-        : "Judge0 API is not configured — using simulator mode.",
+      runner: judge0Service.usingFallback() ? "wandbox" : "judge0",
+      message: !available
+        ? "Judge0 API is unreachable right now."
+        : judge0Service.usingFallback()
+        ? "Code runner ready (Wandbox)."
+        : "Judge0 API is connected and ready.",
     });
   } catch (error) {
     return res.status(200).json({

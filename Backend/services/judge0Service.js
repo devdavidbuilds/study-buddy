@@ -1,4 +1,5 @@
 const axios = require("axios");
+const wandbox = require("./wandboxService");
 
 // ==============================
 // Judge0 Language ID Mapping
@@ -68,12 +69,9 @@ function getApiConfig() {
 async function executeCode(code, language, stdin = "") {
   const { apiUrl, headers, isConfigured } = getApiConfig();
 
+  // No Judge0 key: run on the free Wandbox service instead.
   if (!isConfigured) {
-    return {
-      success: false,
-      error: "Judge0 API not configured. Set JUDGE0_API_KEY in .env",
-      fallback: true,
-    };
+    return wandbox.executeCode(code, language, stdin);
   }
 
   const languageId = LANGUAGE_MAP[language];
@@ -162,18 +160,30 @@ async function pollSubmission(token, apiUrl, headers, maxAttempts = 15) {
 // Run Code Against Test Cases
 // ==============================
 async function runTestCases(code, language, testCases) {
-  const { isConfigured } = getApiConfig();
-
-  if (!isConfigured) {
-    return { success: false, fallback: true, error: "Judge0 not configured." };
-  }
-
   const results = [];
   let totalTime = 0;
   let maxMemory = 0;
 
-  for (const tc of testCases) {
-    const result = await executeCode(code, language, tc.input || "");
+  // The free fallback runner executes every case in one request (it
+  // rate-limits bursts); Judge0 runs them in small parallel batches.
+  let executions = [];
+  if (usingFallback()) {
+    executions = await wandbox.executeBatch(
+      code,
+      language,
+      testCases.map((tc) => tc.input || "")
+    );
+  } else {
+    for (let i = 0; i < testCases.length; i += 4) {
+      const batch = testCases.slice(i, i + 4);
+      executions.push(
+        ...(await Promise.all(batch.map((tc) => executeCode(code, language, tc.input || ""))))
+      );
+    }
+  }
+
+  for (const [index, tc] of testCases.entries()) {
+    const result = executions[index];
 
     if (!result.success) {
       // If it's a fallback signal, propagate
@@ -304,7 +314,8 @@ async function submitSolution(code, language, visibleTestCases, hiddenTestCases 
 // ==============================
 async function isAvailable() {
   const { apiUrl, headers, isConfigured } = getApiConfig();
-  if (!isConfigured) return false;
+  // Without a Judge0 key the Wandbox fallback is always used.
+  if (!isConfigured) return true;
 
   try {
     await axios.get(`${apiUrl}/statuses`, { headers, timeout: 5000 });
@@ -330,8 +341,11 @@ function decodeBase64(str) {
   }
 }
 
+const usingFallback = () => !getApiConfig().isConfigured;
+
 module.exports = {
   executeCode,
+  usingFallback,
   runTestCases,
   submitSolution,
   isAvailable,

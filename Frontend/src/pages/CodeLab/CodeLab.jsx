@@ -9,30 +9,25 @@ import Toolbar from '../../components/codelab/Toolbar';
 import AIPanel from '../../components/ai/AIPanel';
 import CodeLabHeader from '../../components/layout/CodeLabHeader';
 import { runCode, submitCode, checkCompilerStatus } from '../../services/compilerApi';
+import { runPython, runPythonTestCases } from '../../services/pythonRunner';
+import {
+  codeProblems,
+  samplePrograms,
+  codeLabLanguages as languages,
+  getStarterCode,
+} from '../../data/codeLabPrograms';
 import '../../styles/codelab/codelab.css';
 
-const codeProblems = [
-  { id: 1, title: 'Two Sum', category: 'Arrays', difficulty: 'Easy', acceptance: 92, tags: ['Hash Map'], statement: 'Given an array of integers and a target, return the indices of two numbers that add up to the target.', constraints: ['1 <= nums.length <= 10^4', '-10^9 <= nums[i] <= 10^9'], inputFormat: 'Line 1: n, target; Line 2: array values', outputFormat: 'Return the indices as a list.', examples: [{ input: '4 9\n2 7 11 15', output: '[0, 1]' }], hints: ['Think about using a hash map to remember seen values.'], editorial: { approach: 'Store complements in a map while iterating.', complexity: 'O(n) time and O(n) space.' } },
-  { id: 2, title: 'Longest Substring', category: 'Strings', difficulty: 'Medium', acceptance: 86, tags: ['Sliding Window'], statement: 'Find the length of the longest substring without repeating characters.', constraints: ['0 <= s.length <= 5 * 10^4'], inputFormat: 'Line 1: a string', outputFormat: 'Return the length of the longest substring.', examples: [{ input: 'abcabcbb', output: '3' }], hints: ['Use a sliding window with a set or map.'], editorial: { approach: 'Move the left pointer when duplicates appear.', complexity: 'O(n) time and O(n) space.' } },
-  { id: 3, title: 'Binary Search', category: 'Algorithms', difficulty: 'Easy', acceptance: 90, tags: ['Binary Search'], statement: 'Search for a target value in a sorted array.', constraints: ['1 <= nums.length <= 10^5'], inputFormat: 'Line 1: sorted array values; Line 2: target', outputFormat: 'Return the index or -1.', examples: [{ input: '[-1,0,3,5,9,12]\n9', output: '4' }], hints: ['Use the midpoint repeatedly.'], editorial: { approach: 'Halve the search interval each step.', complexity: 'O(log n) time and O(1) space.' } },
-];
-const languages = [
-  { id: 'python', label: 'Python', ext: '.py', monacoId: 'python' },
-  { id: 'cpp', label: 'C++', ext: '.cpp', monacoId: 'cpp' },
-  { id: 'c', label: 'C', ext: '.c', monacoId: 'c' },
-];
-const getTemplate = (problemId, language) => {
-  const templates = {
-    1: { python: 'def two_sum(nums, target):\n    seen = {}\n    for i, num in enumerate(nums):\n        if target - num in seen:\n            return [seen[target - num], i]\n        seen[num] = i\n    return []\n', cpp: '#include <iostream>\n#include <vector>\n#include <unordered_map>\nusing namespace std;\nint main() { return 0; }\n', c: '#include <stdio.h>\nint main() { return 0; }\n' },
-    2: { python: 'def length_of_longest_substring(s):\n    return len(s)\n', cpp: '#include <iostream>\n#include <string>\nusing namespace std;\nint main() { return 0; }\n', c: '#include <stdio.h>\nint main() { return 0; }\n' },
-    3: { python: 'def search(nums, target):\n    return -1\n', cpp: '#include <iostream>\n#include <vector>\nusing namespace std;\nint main() { return 0; }\n', c: '#include <stdio.h>\nint main() { return 0; }\n' },
-  };
-  return templates[problemId]?.[language] || '';
-};
+// v2: problems now read stdin and print; older drafts used function-only
+// starters that produced no output, so they are not reloaded.
+const DRAFTS_KEY = 'codelabCodeMap.v2';
+const allItems = [...codeProblems, ...samplePrograms];
 
-const HIDDEN_COUNT = 6;
 let nextTestId = 1000;
 let nextScratchId = 1;
+
+const pythonRuntimeNote = (installed = []) =>
+  `Python ran in your browser (Pyodide).${installed.length ? `\nLibraries downloaded this run: ${installed.join(', ')}` : ''}`;
 
 export default function CodeLab() {
   const [activeProblemId, setActiveProblemId] = useState(codeProblems[0].id);
@@ -49,9 +44,9 @@ export default function CodeLab() {
   // Load persisted editor drafts from localStorage on mount
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('codelabCodeMap');
+      const raw = localStorage.getItem(DRAFTS_KEY);
       if (raw) setCodeMap(JSON.parse(raw));
-    } catch (e) {
+    } catch {
       // ignore parse errors
     }
   }, []);
@@ -59,8 +54,8 @@ export default function CodeLab() {
   // Persist editor drafts to localStorage whenever they change
   useEffect(() => {
     try {
-      localStorage.setItem('codelabCodeMap', JSON.stringify(codeMap));
-    } catch (e) {
+      localStorage.setItem(DRAFTS_KEY, JSON.stringify(codeMap));
+    } catch {
       // ignore storage errors
     }
   }, [codeMap]);
@@ -71,6 +66,8 @@ export default function CodeLab() {
   const [compileOutput, setCompileOutput] = useState('');
   const [lastError, setLastError] = useState('');
   const [lastOutput, setLastOutput] = useState('');
+  const [outputImages, setOutputImages] = useState([]);
+  const [requestedTab, setRequestedTab] = useState(null);
   const [statusLine, setStatusLine] = useState('');
   const [logs, setLogs] = useState([]);
   const [customInput, setCustomInput] = useState('');
@@ -84,31 +81,33 @@ export default function CodeLab() {
   const shellRef = useRef(null);
 
   const problem = useMemo(
-    () => codeProblems.find(p => p.id === activeProblemId) || codeProblems[0],
+    () => allItems.find(p => p.id === activeProblemId) || codeProblems[0],
     [activeProblemId]
   );
+  const isProgram = problem.kind === 'program';
   const activeLang = languages.find(l => l.id === language);
   const codeKey = `${activeProblemId}:${language}`;
 
-  const defaultCasesFromExamples = (problem.examples || []).map((ex, i) => ({ id: i + 1, input: ex.input || '', expected: ex.output || '' }));
-  const testCases = testCasesByProblem[activeProblemId] ?? (problem.defaultTestCases ?? (defaultCasesFromExamples.length ? defaultCasesFromExamples : []));
+  const testCases = testCasesByProblem[activeProblemId] ?? problem.defaultTestCases ?? [];
 
   const pushLog = useCallback((message) => {
     setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), message }]);
   }, []);
 
+  const showTab = (name) => setRequestedTab({ name, nonce: Date.now() });
+
   useEffect(() => {
-    // Ensure a template is present the first time a problem/language combo is opened
-    setCodeMap(prev => (prev[codeKey] !== undefined ? prev : { ...prev, [codeKey]: getTemplate(activeProblemId, language) }));
-  }, [codeKey, activeProblemId, language]);
+    // Ensure starter code is present the first time a problem/language combo is opened
+    setCodeMap(prev => (prev[codeKey] !== undefined ? prev : { ...prev, [codeKey]: getStarterCode(problem, language) }));
+  }, [codeKey, problem, language]);
 
   useEffect(() => {
     async function fetchStatus() {
       try {
         const result = await checkCompilerStatus();
         if (result?.judge0Available === false) {
-          setStatusLine(result.message || 'Judge0 not configured.');
-          pushLog(result.message || 'Judge0 not configured.');
+          setStatusLine(result.message || 'Code runner unavailable.');
+          pushLog(result.message || 'Code runner unavailable.');
         }
       } catch {
         setStatusLine('Checking compiler status failed.');
@@ -117,7 +116,7 @@ export default function CodeLab() {
     fetchStatus();
   }, [pushLog]);
 
-  const mainTabName = `solution${activeLang?.ext || '.txt'}`;
+  const mainTabName = `${isProgram ? 'program' : 'solution'}${activeLang?.ext || '.txt'}`;
   const tabs = [{ id: 'main', name: mainTabName, dirty: false }, ...scratchTabs.map(t => ({ ...t, dirty: false }))];
 
   const activeTabContent = activeTabId === 'main' ? (codeMap[codeKey] ?? '') : (scratchTabs.find(t => t.id === activeTabId)?.content ?? '');
@@ -132,17 +131,31 @@ export default function CodeLab() {
     }
   };
 
-  const handleSelectProblem = (id) => {
-    setActiveProblemId(id);
-    setActiveTabId('main');
+  const clearRunState = () => {
     setResults(null);
     setExecutionResult(null);
     setCompileOutput('');
     setLastError('');
     setLastOutput('');
+    setOutputImages([]);
     setStatusLine('');
-    setLogs([]);
     setVerdictBanner(null);
+  };
+
+  const handleSelectProblem = (id) => {
+    const item = allItems.find(p => p.id === id);
+    setActiveProblemId(id);
+    setActiveTabId('main');
+    clearRunState();
+    setLogs([]);
+    if (item?.kind === 'program') {
+      setLanguage(item.language);
+      setCustomInput(item.sampleInput || '');
+      showTab(item.sampleInput ? 'Input' : 'Output');
+    } else {
+      setCustomInput('');
+      showTab('Test Cases');
+    }
     setRecentIds(prev => [id, ...prev.filter(p => p !== id)].slice(0, 8));
   };
 
@@ -157,20 +170,75 @@ export default function CodeLab() {
     if (activeTabId === id) setActiveTabId('main');
   };
 
+  const stageFn = useCallback((stage) => {
+    setStatusLine(stage);
+    pushLog(stage);
+  }, [pushLog]);
+
+  // One run with the console's custom stdin (used by sample programs and
+  // the Input tab). Python runs in the browser, C/C++ on the server.
+  const runSingle = useCallback(async (code, stdin) => {
+    setRunning(true);
+    clearRunState();
+    showTab('Output');
+
+    try {
+      if (language === 'python') {
+        const run = await runPython(code, stdin, { onStage: stageFn });
+        setLastOutput(run.stdout || (run.error ? '' : '(no output)'));
+        setOutputImages(run.images || []);
+        setLastError(run.error || '');
+        setCompileOutput(pythonRuntimeNote(run.installed));
+        const status = run.timedOut ? 'Time Limit Exceeded' : run.error ? 'Runtime Error' : 'Completed';
+        setStatusLine(status);
+        setExecutionResult({ status, time: run.time, memory: null, passedCount: 0, totalCount: 0 });
+        if (run.installed?.length) pushLog(`Installed: ${run.installed.join(', ')}`);
+        if (run.error) showTab('Error');
+        return;
+      }
+
+      stageFn('Compiling and running on the server…');
+      const res = await runCode({ code, language, customInput: stdin, onStage: stageFn });
+
+      if (res.fallback || res.status === 'Error') {
+        setLastError(res.error || res.message || 'Compiler service unavailable.');
+        setStatusLine('Run failed');
+        showTab('Error');
+        return;
+      }
+
+      setStatusLine(res.status);
+      setCompileOutput(res.compileOutput || 'Compiled successfully.');
+      if (res.status === 'Compilation Error') {
+        setLastError(res.compileOutput || res.stderr || 'Compilation failed.');
+        showTab('Error');
+        return;
+      }
+
+      setLastOutput(res.stdout || '(no output)');
+      const failed = res.status !== 'Accepted' && res.status !== 'Completed';
+      setLastError(failed ? [res.status, res.stderr].filter(Boolean).join('\n') : res.stderr || '');
+      setExecutionResult({ status: res.status, time: res.time, memory: res.memory, passedCount: 0, totalCount: 0 });
+      if (failed) showTab('Error');
+    } catch (error) {
+      setLastError(error.message || 'Execution failed.');
+      setStatusLine('Execution failed');
+      showTab('Error');
+    } finally {
+      setRunning(false);
+    }
+  }, [language, stageFn, pushLog]);
+
   const executeSubset = useCallback(async (subset, { isSubmit = false } = {}) => {
-    const code = codeMap[codeKey] ?? getTemplate(activeProblemId, language);
+    const code = codeMap[codeKey] ?? getStarterCode(problem, language);
     setLastError('');
+    setOutputImages([]);
 
     if (isSubmit) {
       setSubmitting(true);
     } else {
       setRunning(true);
     }
-
-    const stageFn = (stage) => {
-      setStatusLine(stage);
-      pushLog(stage);
-    };
 
     try {
       if (isSubmit) {
@@ -184,8 +252,14 @@ export default function CodeLab() {
           onStage: stageFn,
         });
 
-        setSubmitting(false);
         setStatusLine(res.verdict || res.status);
+
+        if (res.fallback || (!res.verdict && res.error)) {
+          setLastError(res.error || res.message || 'Compiler service unavailable.');
+          showTab('Error');
+          return;
+        }
+
         setVerdictBanner(res);
 
         if (res.results?.length) {
@@ -197,6 +271,7 @@ export default function CodeLab() {
           setLastError(res.error || 'Compilation failed.');
           setCompileOutput(res.compileOutput || `error: ${res.error || 'Compilation failed.'}`);
           setExecutionResult(null);
+          showTab('Error');
         } else {
           setCompileOutput(res.compileOutput || 'Compiled successfully.');
           setExecutionResult({
@@ -209,68 +284,87 @@ export default function CodeLab() {
           if (res.verdict === 'Accepted') {
             setSolvedIds(prev => prev.includes(activeProblemId) ? prev : [...prev, activeProblemId]);
           }
+          const failedRun = (res.results || []).find(r => r.status === 'Runtime Error' || r.status === 'Time Limit Exceeded');
+          if (failedRun) {
+            setLastError(`${failedRun.status}:\n${failedRun.actual}`);
+            showTab('Error');
+          }
         }
 
         return;
       }
 
-      const res = await runCode({
-        code,
-        language,
-        testCases: subset,
-        customInput: subset.length === 1 && subset[0].id === 'custom' ? customInput : undefined,
-        onStage: stageFn,
-      });
+      let res;
+      if (language === 'python') {
+        // Visible test cases run instantly in the browser.
+        res = await runPythonTestCases(code, subset, { onStage: stageFn });
+        setCompileOutput(pythonRuntimeNote());
+      } else {
+        stageFn('Compiling and running test cases on the server…');
+        res = await runCode({ code, language, testCases: subset, onStage: stageFn });
 
-      setRunning(false);
+        if (res.fallback || res.status === 'Error') {
+          setLastError(res.error || res.message || 'Compiler service unavailable.');
+          setStatusLine('Run failed');
+          showTab('Error');
+          return;
+        }
+
+        if (res.status === 'Compilation Error') {
+          setStatusLine(res.status);
+          setLastError(res.error || res.stderr || res.compileOutput || 'Compilation failed.');
+          setCompileOutput(res.error || res.compileOutput || 'Compilation error detected.');
+          setExecutionResult(null);
+          showTab('Error');
+          return;
+        }
+        setCompileOutput(res.compileOutput || 'Compiled successfully.');
+      }
+
       setStatusLine(res.status);
-
-      if (res.fallback) {
-        setCompileOutput('Compiler service is unavailable. Please try again later.');
-        setLastError('Compiler service unavailable.');
-        setExecutionResult(null);
-        return;
-      }
-
-      if (res.status === 'Compilation Error') {
-        setLastError(res.stderr || res.compileOutput || 'Compilation failed.');
-        setCompileOutput(res.compileOutput || res.stderr || 'Compilation error detected.');
-        setExecutionResult(null);
-        return;
-      }
-
-      const mergedResults = subset[0]?.id === 'custom' ? [] : res.results;
       setResults(prev => {
         const merged = new Map((prev || []).map(r => [r.id, r]));
-        (mergedResults || []).forEach(r => merged.set(r.id, r));
+        (res.results || []).forEach(r => merged.set(r.id, r));
         return Array.from(merged.values());
       });
-      setLastOutput(res.stdout || (res.results?.map(r => `Case ${r.id}: ${r.actual}`).join('\n')) || '');
-      setCompileOutput(res.compileOutput || 'Compiled successfully.');
+      setLastOutput((res.results || []).map(r => `Case ${r.id} (${r.status}):\n${r.actual}`).join('\n\n'));
+      const firstError = (res.results || []).find(r => r.status === 'Runtime Error' || r.status === 'Time Limit Exceeded');
+      setLastError(firstError ? `Case ${firstError.id}: ${firstError.actual}` : '');
       setExecutionResult({
         status: res.status,
         time: res.time,
-        memory: res.memory,
-        passedCount: res.results ? res.results.filter(r => r.passed).length : 0,
-        totalCount: res.results ? res.results.length : 0,
+        memory: res.memory ?? null,
+        passedCount: (res.results || []).filter(r => r.passed).length,
+        totalCount: (res.results || []).length,
       });
+      showTab('Test Cases');
     } catch (error) {
-      setRunning(false);
-      setSubmitting(false);
       setLastError(error.message || 'Execution failed.');
       setCompileOutput(error.message || 'Execution failed.');
       setStatusLine('Execution failed');
       setExecutionResult(null);
+      showTab('Error');
+    } finally {
+      setRunning(false);
+      setSubmitting(false);
     }
-  }, [codeMap, codeKey, activeProblemId, language, problem, customInput, pushLog]);
+  }, [codeMap, codeKey, activeProblemId, language, problem, stageFn]);
 
-  const handleRun = () => executeSubset(testCases);
-  const handleSubmit = () => executeSubset(testCases, { isSubmit: true });
-  const handleRunOne = (id) => executeSubset(testCases.filter(tc => tc.id === id));
-  const handleRunCustom = () => {
-    const custom = { id: 'custom', input: customInput, expected: '' };
-    executeSubset([custom]);
+  const currentCode = () => codeMap[codeKey] ?? getStarterCode(problem, language);
+
+  const handleRun = () => {
+    if (isProgram || testCases.length === 0) {
+      runSingle(currentCode(), customInput);
+    } else {
+      executeSubset(testCases);
+    }
   };
+  const handleSubmit = () => {
+    if (isProgram) return;
+    executeSubset(testCases, { isSubmit: true });
+  };
+  const handleRunOne = (id) => executeSubset(testCases.filter(tc => tc.id === id));
+  const handleRunCustom = () => runSingle(currentCode(), customInput);
 
   const handleSave = () => {
     pushLog('Saved solution.');
@@ -278,8 +372,8 @@ export default function CodeLab() {
   };
 
   const handleResetCode = () => {
-    setCodeMap(prev => ({ ...prev, [codeKey]: getTemplate(activeProblemId, language) }));
-    pushLog('Reset code to starter template.');
+    setCodeMap(prev => ({ ...prev, [codeKey]: getStarterCode(problem, language) }));
+    pushLog(isProgram ? 'Restored the original program.' : 'Reset code to starter template.');
   };
 
   const handleLoadSubmissionCode = (code, lang, problemId) => {
@@ -327,7 +421,7 @@ export default function CodeLab() {
 
   const testCaseHandlers = {
     testCases,
-    hiddenCount: HIDDEN_COUNT,
+    hiddenCount: (problem.hiddenTestCases || []).length,
     results,
     running,
     onAdd: () => setTestCasesByProblem(prev => ({
@@ -377,6 +471,7 @@ export default function CodeLab() {
         onToggleAI={() => setAiOpen(o => !o)}
         running={running}
         submitting={submitting}
+        submitDisabled={isProgram}
         fontSize={fontSize}
         onFontSizeChange={(delta) => setFontSize(f => Math.min(24, Math.max(10, f + delta)))}
       />
@@ -384,7 +479,11 @@ export default function CodeLab() {
       {verdictBanner && (
         <div className={`codelab-verdict-banner ${verdictBanner.verdict === 'Accepted' ? 'accepted' : 'rejected'}`}>
           <strong>{verdictBanner.verdict}</strong>
-          <span>{verdictBanner.passedCount}/{verdictBanner.total} test cases passed • {verdictBanner.time}ms • {verdictBanner.memory}MB</span>
+          <span>
+            {verdictBanner.passedCount}/{verdictBanner.total} test cases passed
+            {verdictBanner.time ? ` • ${Math.round(verdictBanner.time)}ms` : ''}
+            {verdictBanner.memory ? ` • ${verdictBanner.memory}MB` : ''}
+          </span>
           <button onClick={() => setVerdictBanner(null)} aria-label="Dismiss">×</button>
         </div>
       )}
@@ -392,6 +491,7 @@ export default function CodeLab() {
       <div className="codelab-body">
         <ProblemSidebar
           problems={codeProblems}
+          programs={samplePrograms}
           activeProblemId={activeProblemId}
           onSelectProblem={handleSelectProblem}
           solvedIds={solvedIds}
@@ -441,6 +541,8 @@ export default function CodeLab() {
             running={running || submitting}
             testCaseProps={testCaseHandlers}
             onLoadSubmissionCode={handleLoadSubmissionCode}
+            outputImages={outputImages}
+            requestedTab={requestedTab}
           />
         </div>
 

@@ -271,7 +271,8 @@
 }
 
 .codelab-view-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-1);
   background: rgba(46, 46, 46, 0.03);
   border-radius: var(--radius-md);
@@ -447,6 +448,9 @@
   display: flex;
   gap: 2px;
   overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: none;
 }
 .codelab-console-tabs button {
   font-size: 11.5px;
@@ -459,8 +463,15 @@
 .codelab-console-tabs button.active { background: #2A242C; color: #F4B3CE; }
 .codelab-console-tabs button:hover { color: #F0E8EA; }
 
-.codelab-console-header-right { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; }
-.codelab-status-line { font-size: 11px; color: #B8ADB2; }
+.codelab-console-header-right { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; margin-left: var(--space-3); }
+.codelab-status-line {
+  font-size: 11px;
+  color: #B8ADB2;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .codelab-console-collapse { color: #9A929C; padding: 4px; }
 .codelab-console-collapse:hover { color: white; }
 
@@ -721,4 +732,34 @@
   .codelab-sidebar, .codelab-details-panel { display: none; }
   .codelab-header-stats { display: none; }
   .codelab-ai-panel { width: 100%; }
+}
+
+/* ---- Sample programs ---- */
+.codelab-programs-hint {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  padding: 0 var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.program-icon { color: var(--color-info); }
+.codelab-diff-tag.codelab-lang-tag { background: var(--color-info-muted); color: var(--color-info); }
+
+.codelab-sample-input {
+  background: #17141A;
+  border: 1px solid #2A242C;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  color: #D9CFD2;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.codelab-output-image {
+  display: block;
+  max-width: 100%;
+  margin-top: var(--space-3);
+  border-radius: var(--radius-md);
+  background: #fff;
 }

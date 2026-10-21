@@ -14,7 +14,7 @@ export default function Toolbar({
   language, onLanguageChange, onRun, onSubmit, onSave, onReset,
   isFullscreen, onToggleFullscreen, onDownload, onUpload,
   aiOpen, onToggleAI, running, submitting,
-  fontSize, onFontSizeChange,
+  fontSize, onFontSizeChange, submitDisabled = false,
 }) {
   const fileInputRef = useRef(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -35,7 +35,12 @@ export default function Toolbar({
         <button className="codelab-tool-btn primary" onClick={onRun} disabled={running || submitting}>
           <Play size={14} /> {running ? 'Running...' : 'Run'}
         </button>
-        <button className="codelab-tool-btn accent" onClick={onSubmit} disabled={running || submitting}>
+        <button
+          className="codelab-tool-btn accent"
+          onClick={onSubmit}
+          disabled={running || submitting || submitDisabled}
+          title={submitDisabled ? 'Sample programs have no tests to submit — just Run them.' : undefined}
+        >
           <Send size={14} /> {submitting ? 'Submitting...' : 'Submit'}
         </button>
         <button className="codelab-tool-btn" onClick={onSave}><Save size={14} /> Save</button>

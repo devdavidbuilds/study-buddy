@@ -22,6 +22,7 @@ export async function runCode({ code, language, testCases, customInput, onStage 
     const payload = response?.data ?? {};
     return {
       status: payload.status || 'Completed',
+      error: payload.error || '',
       stdout: payload.stdout || '',
       stderr: payload.stderr || '',
       compileOutput: payload.compileOutput || '',

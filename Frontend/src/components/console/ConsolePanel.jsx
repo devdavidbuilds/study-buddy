@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import TestCasePanel from '../testcases/TestCasePanel';
 import OutputSummary from '../output/OutputSummary';
@@ -11,9 +11,15 @@ export default function ConsolePanel({
   customInput, onCustomInputChange, onRunCustom,
   lastOutput, lastError, executionResult, compileOutput, logs,
   testCaseProps, statusLine, running,
-  onLoadSubmissionCode,
+  onLoadSubmissionCode, outputImages = [], requestedTab,
 }) {
   const [tab, setTab] = useState('Test Cases');
+
+  // Lets the page switch tabs (e.g. to Output after running a program).
+  // requestedTab is { name, nonce } so the same tab can be requested twice.
+  useEffect(() => {
+    if (requestedTab?.name) setTab(requestedTab.name);
+  }, [requestedTab]);
 
   return (
     <div className={`codelab-console ${collapsed ? 'collapsed' : ''}`}>
@@ -59,7 +65,12 @@ export default function ConsolePanel({
                   <div className="skeleton-line long" />
                 </div>
               ) : (
-                <pre className="codelab-console-output">{lastOutput || 'Run your code to see output here.'}</pre>
+                <>
+                  <pre className="codelab-console-output">{lastOutput || 'Run your code to see output here.'}</pre>
+                  {outputImages.map((src, i) => (
+                    <img key={i} className="codelab-output-image" src={`data:image/png;base64,${src}`} alt={`Plot ${i + 1}`} />
+                  ))}
+                </>
               )}
             </div>
           )}

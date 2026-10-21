@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Lightbulb, BookOpenCheck, Lock } from 'lucide-react';
+import { Lightbulb, BookOpenCheck, Lock, Play } from 'lucide-react';
+import { languageLabel } from '../../data/codeLabPrograms';
 
 const diffClass = { Easy: 'diff-easy', Medium: 'diff-medium', Hard: 'diff-hard' };
 
@@ -7,6 +8,53 @@ export default function ProblemDetailsPanel({ problem, solved }) {
   const [tab, setTab] = useState('description');
   const [revealedHints, setRevealedHints] = useState(0);
   const [editorialUnlocked, setEditorialUnlocked] = useState(false);
+  const isProgram = problem.kind === 'program';
+
+  if (isProgram) {
+    return (
+      <aside className="codelab-details-panel">
+        <div className="codelab-details-header">
+          <h2>{problem.title}</h2>
+          <div className="codelab-details-meta">
+            <span className="codelab-diff-tag codelab-lang-tag">{languageLabel(problem.language)}</span>
+            <span>Sample program</span>
+            <span>{problem.category}</span>
+          </div>
+          <div className="codelab-tag-row">
+            {problem.tags.map(t => <span key={t} className="codelab-tag">{t}</span>)}
+          </div>
+        </div>
+
+        <div className="codelab-details-body">
+          <p className="codelab-statement">{problem.statement}</p>
+
+          <h4>How to use</h4>
+          <p className="codelab-format-text">
+            <Play size={12} /> Press <strong>Run</strong> to execute it. The printed result appears in the Output tab of the console.
+            Edit the code freely — <strong>Reset</strong> restores the original.
+          </p>
+
+          {problem.sampleInput && (
+            <>
+              <h4>Sample input</h4>
+              <p className="codelab-format-text">Pre-filled in the console's Input tab. Change it and run again.</p>
+              <pre className="codelab-sample-input">{problem.sampleInput}</pre>
+            </>
+          )}
+
+          {problem.language === 'python' && (
+            <>
+              <h4>Runs in your browser</h4>
+              <p className="codelab-format-text">
+                Python runs locally with Pyodide. Imported libraries (numpy, pandas, scikit-learn, scipy, sympy, matplotlib…)
+                are downloaded automatically the first time, so the first run can take a little longer.
+              </p>
+            </>
+          )}
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="codelab-details-panel">
