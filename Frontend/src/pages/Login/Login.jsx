@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Mail,
   Lock,
@@ -12,40 +12,9 @@ import {
 
 import Button from '../../components/ui/Button';
 import GlassCard from '../../components/ui/GlassCard';
-import { login, profile } from '../../api/authApi';
+import { login } from '../../api/authApi';
 import { setAuthToken } from '../../api/api';
 import './Login.css';
-
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ||
-  'https://study-buddy-91gv.onrender.com'
-).replace(/\/+$/, '');
-
-const GoogleIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    style={{ flexShrink: 0 }}
-  >
-    <path
-      fill="#4285F4"
-      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.88c2.27-2.09 3.66-5.17 3.66-9.09z"
-    />
-    <path
-      fill="#34A853"
-      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.1C3.27 21.42 7.33 24 12 24z"
-    />
-    <path
-      fill="#FBBC05"
-      d="M5.28 14.32c-.25-.72-.38-1.49-.38-2.32s.13-1.6.38-2.32V6.58H1.25C.45 8.16 0 9.99 0 12c0 2.01.45 3.84 1.25 5.42l4.03-3.1z"
-    />
-    <path
-      fill="#EA4335"
-      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.27 2.58 1.25 6.58l4.03 3.1c.95-2.83 3.6-4.93 6.72-4.93z"
-    />
-  </svg>
-);
 
 export default function Login() {
   const [loginType, setLoginType] = useState('student');
@@ -56,56 +25,6 @@ export default function Login() {
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  useEffect(() => {
-    const token = searchParams.get('token');
-    const authError = searchParams.get('error');
-
-    if (authError) {
-      setError(authError);
-      setSearchParams({}, { replace: true });
-      return;
-    }
-
-    if (token) {
-      setLoading(true);
-      setAuthToken(token);
-
-      profile()
-        .then((res) => {
-          const user = res?.data?.user;
-
-          if (user) {
-            localStorage.setItem(
-              'studyBuddyProfile',
-              JSON.stringify(user)
-            );
-
-            if (user.role === 'faculty') {
-              navigate('/faculty');
-            } else {
-              navigate('/workspace');
-            }
-          } else {
-            navigate('/workspace');
-          }
-        })
-        .catch((err) => {
-          console.error('Google profile fetch failed:', err);
-          navigate('/workspace');
-        })
-        .finally(() => {
-          setLoading(false);
-          setSearchParams({}, { replace: true });
-        });
-    }
-  }, [searchParams, navigate, setSearchParams]);
-
-  const handleGoogleSignIn = () => {
-    window.location.href =
-      `${API_BASE_URL}/api/auth/google?role=${encodeURIComponent(loginType)}`;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -329,32 +248,6 @@ export default function Login() {
                   : 'Sign In'}
             </Button>
           </form>
-
-          <div className="login-divider">
-            <span>or continue with</span>
-          </div>
-
-          <div className="social-buttons">
-            <button
-              type="button"
-              className="social-btn"
-              onClick={handleGoogleSignIn}
-              title="Sign in with Google"
-            >
-              <GoogleIcon />
-              <span>Google</span>
-            </button>
-
-            <button
-              type="button"
-              className="social-btn"
-              disabled
-              style={{ opacity: 0.6, cursor: 'not-allowed' }}
-              title="Apple Sign-In is coming soon"
-            >
-              🍎 Apple
-            </button>
-          </div>
 
           <div className="login-footer">
             Don't have an account?{' '}

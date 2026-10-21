@@ -197,34 +197,6 @@
   background: var(--border-color);
 }
 
-.social-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-}
-
-.social-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: rgba(46, 46, 46, 0.025);
-  border: 1px solid var(--border-color);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.social-btn:hover {
-  background: rgba(46, 46, 46, 0.05);
-  color: var(--text-primary);
-  border-color: var(--border-color-hover);
-}
-
 .login-footer {
   text-align: center;
   margin-top: var(--space-6);

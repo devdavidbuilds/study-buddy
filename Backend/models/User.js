@@ -25,24 +25,46 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: function () {
-        return !this.googleId;
-      },
+      required: [true, "Password is required"],
       minlength: [8, "Password must be at least 8 characters"],
       maxlength: [100, "Password cannot exceed 100 characters"],
       select: false,
     },
 
-    googleId: {
+    // Registration details. Not required at schema level so existing and
+    // seeded accounts stay valid; registerUser enforces them for new signups.
+    phone: {
       type: String,
-      unique: true,
-      sparse: true,
+      trim: true,
+      match: [/^\+?[0-9\s-]{7,20}$/, "Please enter a valid phone number"],
     },
 
-    authProvider: {
+    dateOfBirth: {
+      type: Date,
+    },
+
+    university: {
       type: String,
-      enum: ["local", "google"],
-      default: "local",
+      trim: true,
+      maxlength: [120, "Institution name cannot exceed 120 characters"],
+    },
+
+    department: {
+      type: String,
+      trim: true,
+      maxlength: [80, "Department cannot exceed 80 characters"],
+    },
+
+    yearOfStudy: {
+      type: Number,
+      min: [1, "Year of study must be between 1 and 6"],
+      max: [6, "Year of study must be between 1 and 6"],
+    },
+
+    rollNumber: {
+      type: String,
+      trim: true,
+      maxlength: [30, "Roll number cannot exceed 30 characters"],
     },
 
     role: {
