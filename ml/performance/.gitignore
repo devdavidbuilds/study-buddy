@@ -1,0 +1,5 @@
+# Trained models - rebuild with train_model.py
+artifacts/
+# Exported real student history and generated data: never commit
+data/
+__pycache__/
