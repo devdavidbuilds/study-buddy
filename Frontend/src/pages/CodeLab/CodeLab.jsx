@@ -181,7 +181,7 @@ export default function CodeLab() {
       showTab('Terminal');
     } else {
       setCustomInput('');
-      showTab('Test Cases');
+      showTab('Terminal');
     }
     setRecentIds(prev => [id, ...prev.filter(p => p !== id)].slice(0, 8));
   };
@@ -517,13 +517,9 @@ export default function CodeLab() {
 
   const currentCode = () => codeMap[codeKey] ?? getStarterCode(problem, language);
 
-  const handleRun = () => {
-    if (isProgram || testCases.length === 0) {
-      runInTerminal(currentCode());
-    } else {
-      executeSubset(testCases);
-    }
-  };
+  // Run always goes to the terminal so the student types the input;
+  // test cases run from the Test Cases tab (Run All) and on Submit.
+  const handleRun = () => runInTerminal(currentCode());
   const handleSubmit = () => {
     if (isProgram) return;
     executeSubset(testCases, { isSubmit: true });
@@ -610,7 +606,7 @@ export default function CodeLab() {
       [activeProblemId]: testCases.map(tc => tc.id === id ? { ...tc, ...patch } : tc),
     })),
     onRunOne: handleRunOne,
-    onRunAll: handleRun,
+    onRunAll: () => executeSubset(testCases),
     onReset: () => {
       setTestCasesByProblem(prev => ({ ...prev, [activeProblemId]: problem.defaultTestCases }));
       setResults(null);

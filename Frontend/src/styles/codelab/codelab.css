@@ -450,15 +450,17 @@
   overflow-x: auto;
   flex: 1;
   min-width: 0;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: #3A333C transparent;
 }
 .codelab-console-tabs button {
   font-size: 11.5px;
   font-weight: 600;
   color: #9A929C;
-  padding: 6px 12px;
+  padding: 6px 9px;
   border-radius: 6px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .codelab-console-tabs button.active { background: #2A242C; color: #F4B3CE; }
 .codelab-console-tabs button:hover { color: #F0E8EA; }
@@ -467,7 +469,7 @@
 .codelab-status-line {
   font-size: 11px;
   color: #B8ADB2;
-  max-width: 220px;
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

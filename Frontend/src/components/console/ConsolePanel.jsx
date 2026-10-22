@@ -14,7 +14,7 @@ export default function ConsolePanel({
   testCaseProps, statusLine, running,
   onLoadSubmissionCode, requestedTab,
 }) {
-  const [tab, setTab] = useState('Test Cases');
+  const [tab, setTab] = useState('Terminal');
 
   // Lets the page switch tabs (e.g. to Output after running a program).
   // requestedTab is { name, nonce } so the same tab can be requested twice.
