@@ -83,6 +83,12 @@ const userSchema = new mongoose.Schema(
       default: "",
       maxlength: [300, "Bio cannot exceed 300 characters"],
     },
+    // Login tracking for the faculty Students page: set on every
+    // successful login, and lastSeenAt refreshed (at most once a minute)
+    // on authenticated requests — see middleware/authMiddleware.
+    lastLoginAt: { type: Date, default: null },
+    lastSeenAt: { type: Date, default: null },
+    loginCount: { type: Number, default: 0, min: 0 },
     // Notification choices from the Settings page.
     preferences: {
       assignments: { type: Boolean, default: true },

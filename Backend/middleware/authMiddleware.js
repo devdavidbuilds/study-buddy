@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+const SEEN_INTERVAL_MS = 60 * 1000;
+
 // Protect routes using JWT
 const protect = async (req, res, next) => {
   try {
@@ -35,6 +37,13 @@ const protect = async (req, res, next) => {
         success: false,
         message: "Your account has been disabled.",
       });
+    }
+
+    // "Last seen" for the faculty Students page, written at most once a
+    // minute per user and never blocking the request.
+    const now = Date.now();
+    if (!user.lastSeenAt || now - new Date(user.lastSeenAt).getTime() > SEEN_INTERVAL_MS) {
+      User.updateOne({ _id: user._id }, { $set: { lastSeenAt: new Date(now) } }).catch(() => {});
     }
 
     req.user = user;

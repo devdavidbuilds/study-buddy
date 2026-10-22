@@ -183,6 +183,11 @@ const loginUser = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // Record the login for the faculty Students page; never block login.
+    const now = new Date();
+    User.updateOne({ _id: user._id }, { $set: { lastLoginAt: now, lastSeenAt: now }, $inc: { loginCount: 1 } })
+      .catch((error) => console.error("Login tracking failed:", error.message));
+
     return res.status(200).json({
       success: true,
       message: "Login successful.",

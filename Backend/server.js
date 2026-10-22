@@ -27,6 +27,7 @@ const plannerRoutes = require("./routes/plannerRoutes");
 const certificateRoutes = require("./routes/certificateRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const noteRoutes = require("./routes/noteRoutes");
+const facultyStudentRoutes = require("./routes/facultyStudentRoutes");
 const { startRecommenderKeepWarm } = require("./controllers/recommendationController");
 
 connectDB();
@@ -66,6 +67,7 @@ app.use("/api/assignments", assignmentRoutes);
 app.use("/api/quizzes", quizRoutes);
 app.use("/api/activity", activityRoutes);
 app.use("/api/faculty/courses", facultyProgressRoutes);
+app.use("/api/faculty/students", facultyStudentRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/submissions", submissionFileRoutes);
 app.use("/api/materials", lectureMaterialRoutes);

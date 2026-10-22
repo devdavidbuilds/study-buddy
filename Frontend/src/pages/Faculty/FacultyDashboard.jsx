@@ -34,6 +34,7 @@ import FacultyCreateAssignment from './FacultyCreateAssignment';
 import FacultySubmissions from './FacultySubmissions';
 import FacultyQuizGenerator from './FacultyQuizGenerator';
 import FacultyStudentProgress from './FacultyStudentProgress';
+import FacultyStudents from './FacultyStudents';
 import FacultyLectureMaterials from './FacultyLectureMaterials';
 import './FacultyDashboard.css';
 
@@ -263,7 +264,11 @@ export default function FacultyDashboard() {
       );
     }
 
-    if (activeNav === 'student-progress' || activeNav === 'students') {
+    if (activeNav === 'students') {
+      return <FacultyStudents onBack={() => setActiveNav('dashboard')} />;
+    }
+
+    if (activeNav === 'student-progress') {
       return (
         <FacultyStudentProgress
           onBack={() => setActiveNav('dashboard')}
