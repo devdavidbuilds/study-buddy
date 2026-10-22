@@ -21,9 +21,8 @@ import {
 import GlassCard from '../../components/ui/GlassCard';
 import ProgressBar from '../../components/ui/ProgressBar';
 import PageState from '../../components/ui/PageState';
-import { getCourses } from '../../api/courseApi';
 import { getMyActivity } from '../../api/activityApi';
-import useProfile from '../../hooks/useProfile';
+import useLearningSummary from '../../hooks/useLearningSummary';
 import { generateInitials, getRelativeTime } from '../../utils/helpers';
 
 // Icon + label for each activity type this feed can display. Only
@@ -32,6 +31,7 @@ const ACTIVITY_DISPLAY = {
   COURSE_OPENED: { icon: BookOpen, label: 'Opened course' },
   LESSON_OPENED: { icon: BookOpen, label: 'Opened lesson' },
   LESSON_COMPLETED: { icon: CheckCircle2, label: 'Completed lesson' },
+  QUIZ_COMPLETED: { icon: ClipboardCheck, label: 'Completed quiz' },
   ASSIGNMENT_SUBMITTED: { icon: ClipboardList, label: 'Submitted assignment' },
   ASSIGNMENT_EVALUATED: { icon: ClipboardCheck, label: 'Assignment graded' },
 };
@@ -62,6 +62,11 @@ function describeActivity(activity) {
     detail = `${title}${courseName ? ` · ${courseName}` : ''}${scoreText}`;
   }
 
+  if (activity.activityType === 'QUIZ_COMPLETED') {
+    const score = activity.metadata?.percentage;
+    detail = `${title || 'Quiz'}${score !== undefined ? ` — ${score}%` : ''}${courseName ? ` · ${courseName}` : ''}`;
+  }
+
   if (activity.activityType === 'LESSON_OPENED' || activity.activityType === 'LESSON_COMPLETED') {
     const lessonTitle = activity.metadata?.lessonTitle || '';
     detail = `${lessonTitle || 'Lesson'}${courseName ? ` · ${courseName}` : ''}`;
@@ -88,37 +93,10 @@ const chartTooltipStyle = {
 };
 
 export default function ProgressPage() {
-  const { profile } = useProfile();
-
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { summary, loading, error, refresh } = useLearningSummary();
 
   const [activity, setActivity] = useState([]);
   const [activityLoading, setActivityLoading] = useState(true);
-
-  useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const res = await getCourses();
-
-        setCourses(
-          Array.isArray(res?.data?.data)
-            ? res.data.data
-            : []
-        );
-      } catch (err) {
-        setError(
-          err?.response?.data?.message ||
-          'Unable to load progress data.'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProgress();
-  }, []);
 
   useEffect(() => {
     const loadActivity = async () => {
@@ -139,61 +117,12 @@ export default function ProgressPage() {
     loadActivity();
   }, []);
 
-  const weeklyProgress = [
-    { day: 'Mon', hours: 2.5 },
-    { day: 'Tue', hours: 3.2 },
-    { day: 'Wed', hours: 2.8 },
-    { day: 'Thu', hours: 4.1 },
-    { day: 'Fri', hours: 3.6 },
-    { day: 'Sat', hours: 4.8 },
-    { day: 'Sun', hours: 3.7 },
-  ];
-
-  const monthlyActivity = [
-    { week: 'W1', study: 8, quizzes: 4 },
-    { week: 'W2', study: 12, quizzes: 6 },
-    { week: 'W3', study: 10, quizzes: 5 },
-    { week: 'W4', study: 14, quizzes: 8 },
-  ];
-
-  const learningGoals = [
-    {
-      id: 1,
-      title: 'Finish 3 lessons',
-      progress: 72,
-    },
-    {
-      id: 2,
-      title: 'Solve 10 coding problems',
-      progress: 64,
-    },
-  ];
-
-  // Backend uses "fullName", while some frontend
-  // components may use "name", so support both.
-  const currentUserName =
-    profile?.fullName ||
-    profile?.name ||
-    'You';
-
-  const leaderboard = [
-    {
-      rank: 1,
-      name: 'Mina',
-      problems: 48,
-      xp: 4200,
-    },
-    {
-      rank: 2,
-      name: currentUserName,
-      problems: 36,
-      xp: 3800,
-    },
-  ];
-
-  const totalHours = weeklyProgress
-    .reduce((sum, d) => sum + d.hours, 0)
-    .toFixed(1);
+  // All figures below come from GET /api/progress/summary (real records).
+  const weeklyProgress = summary?.weekly || [];
+  const monthlyActivity = summary?.monthly || [];
+  const learningGoals = summary?.goals || [];
+  const leaderboard = summary?.leaderboard || [];
+  const totalHours = summary?.stats?.hoursThisWeek ?? 0;
 
   if (loading) {
     return (
@@ -210,7 +139,7 @@ export default function ProgressPage() {
         type="error"
         title="Unable to load progress"
         message={error}
-        onRetry={() => window.location.reload()}
+        onRetry={refresh}
       />
     );
   }
@@ -229,7 +158,7 @@ export default function ProgressPage() {
       <div className="progress-stats-row">
         <GlassCard className="progress-stat-card">
           <div className="progress-stat-value gradient-text">
-            {profile?.streak || 12}
+            {summary.streak}
           </div>
 
           <div className="progress-stat-label">
@@ -239,7 +168,7 @@ export default function ProgressPage() {
 
         <GlassCard className="progress-stat-card">
           <div className="progress-stat-value gradient-text">
-            {(profile?.xp || 2400).toLocaleString()}
+            {summary.xp.toLocaleString()}
           </div>
 
           <div className="progress-stat-label">
@@ -249,7 +178,7 @@ export default function ProgressPage() {
 
         <GlassCard className="progress-stat-card">
           <div className="progress-stat-value gradient-text">
-            {profile?.level || 4}
+            {summary.level}
           </div>
 
           <div className="progress-stat-label">
@@ -418,9 +347,14 @@ export default function ProgressPage() {
             </h3>
 
             <div className="goals-list">
+              {learningGoals.length === 0 && (
+                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-tertiary)' }}>
+                  No weekly goals yet — set one in the Planner to track it here.
+                </p>
+              )}
               {learningGoals.map((goal) => (
                 <div
-                  key={goal.id}
+                  key={goal._id}
                   className="goal-item"
                   style={{
                     marginBottom: 'var(--space-4)',
@@ -474,9 +408,7 @@ export default function ProgressPage() {
               <div
                 key={leader.rank}
                 className={`leaderboard-row ${
-                  leader.name === currentUserName
-                    ? 'you'
-                    : ''
+                  leader.isYou ? 'you' : ''
                 }`}
               >
                 <div className="leaderboard-rank">
@@ -508,8 +440,8 @@ export default function ProgressPage() {
                         'var(--text-tertiary)',
                     }}
                   >
-                    {leader.problems} problems
-                    solved
+                    {leader.lessons} lessons
+                    completed
                   </div>
                 </div>
 

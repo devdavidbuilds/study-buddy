@@ -4,14 +4,14 @@ import GlassCard from '../../components/ui/GlassCard';
 import ProgressBar from '../../components/ui/ProgressBar';
 import Badge from '../../components/ui/Badge';
 import PageState from '../../components/ui/PageState';
-import useProfile from '../../hooks/useProfile';
+import useLearningSummary from '../../hooks/useLearningSummary';
+import { getRelativeTime } from '../../utils/helpers';
 import { getMyCertificates, downloadCertificate } from '../../api/certificateApi';
 
 export default function Achievements() {
-  const { profile } = useProfile();
-  const [achievements, setAchievements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  // Badges are earned from real milestones (see GET /api/progress/summary).
+  const { summary, loading, error } = useLearningSummary();
+  const achievements = summary?.badges || [];
   const [certificates, setCertificates] = useState([]);
   const [downloadingId, setDownloadingId] = useState('');
   const [certificateError, setCertificateError] = useState('');
@@ -34,23 +34,6 @@ export default function Achievements() {
     }
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        setAchievements([
-          { id: 1, title: 'First Steps', description: 'Started your first course', earned: true, date: '2 days ago', progress: 100, icon: '🌱' },
-          { id: 2, title: 'Consistent Learner', description: 'Maintained a 7-day streak', earned: true, date: '1 day ago', progress: 100, icon: '🔥' },
-          { id: 3, title: 'Problem Solver', description: 'Completed 10 coding challenges', earned: false, progress: 70, icon: '💡' },
-        ]);
-      } catch (err) {
-        setError('Unable to load achievements.');
-      } finally {
-        setLoading(false);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, []);
-
   const earnedCount = achievements.filter(a => a.earned).length;
 
   if (loading) return <PageState title="Loading achievements" message="Gathering your badges…" />;
@@ -61,7 +44,7 @@ export default function Achievements() {
       <div className="page-header">
         <div>
           <h1>Achievements</h1>
-            <p>{earnedCount} of {achievements.length} badges earned • {profile?.streak || 12} day streak 🔥</p>
+            <p>{earnedCount} of {achievements.length} badges earned • {summary.streak} day streak 🔥</p>
         </div>
       </div>
 
@@ -106,7 +89,7 @@ export default function Achievements() {
             <h4>{a.title}</h4>
             <p>{a.description}</p>
             {a.earned ? (
-              <Badge variant="success">Earned {a.date}</Badge>
+              <Badge variant="success">Earned{a.earnedAt ? ` ${getRelativeTime(a.earnedAt)}` : ''}</Badge>
             ) : (
               <>
                 <ProgressBar value={a.progress} size="sm" />

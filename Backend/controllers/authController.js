@@ -220,8 +220,69 @@ const getProfile = async (req, res) => {
   }
 };
 
+// ==============================
+// PUT /api/auth/profile
+// The logged-in user edits their own name, bio, contact/college details
+// and notification preferences. Email, role and password cannot be
+// changed here.
+// ==============================
+const PREFERENCE_KEYS = ["assignments", "courses", "achievements", "weeklyDigest"];
+
+const updateProfile = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    const text = (value) => (typeof value === "string" ? value.trim() : undefined);
+    if (body.fullName !== undefined) {
+      const fullName = text(body.fullName);
+      if (!fullName || fullName.length < 3 || fullName.length > 50) {
+        return res.status(400).json({ success: false, message: "Full name must be 3-50 characters." });
+      }
+      user.fullName = fullName;
+    }
+    if (body.bio !== undefined) user.bio = text(body.bio) ?? "";
+    if (body.phone !== undefined) {
+      const phone = text(body.phone);
+      if (phone && !/^\+?[0-9\s-]{7,20}$/.test(phone)) {
+        return res.status(400).json({ success: false, message: "Invalid phone number." });
+      }
+      user.phone = phone || undefined;
+    }
+    for (const field of ["university", "department", "rollNumber"]) {
+      if (body[field] !== undefined) user[field] = text(body[field]) || undefined;
+    }
+    if (body.yearOfStudy !== undefined && body.yearOfStudy !== "") {
+      const year = Number(body.yearOfStudy);
+      if (!Number.isInteger(year) || year < 1 || year > 6) {
+        return res.status(400).json({ success: false, message: "Year of study must be between 1 and 6." });
+      }
+      user.yearOfStudy = year;
+    }
+    if (body.preferences && typeof body.preferences === "object") {
+      for (const key of PREFERENCE_KEYS) {
+        if (typeof body.preferences[key] === "boolean") user.preferences[key] = body.preferences[key];
+      }
+    }
+
+    await user.save();
+    const saved = await User.findById(user._id).select("-password");
+    return res.status(200).json({ success: true, message: "Profile updated.", user: saved });
+  } catch (error) {
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ success: false, message: Object.values(error.errors)[0]?.message || "Invalid profile details." });
+    }
+    console.error("Update Profile Error:", error.message);
+    return res.status(500).json({ success: false, message: "Unable to update your profile." });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getProfile,
+  updateProfile,
 };

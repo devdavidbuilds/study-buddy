@@ -26,6 +26,7 @@ const lectureMaterialRoutes = require("./routes/lectureMaterialRoutes");
 const plannerRoutes = require("./routes/plannerRoutes");
 const certificateRoutes = require("./routes/certificateRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
+const noteRoutes = require("./routes/noteRoutes");
 
 connectDB();
 
@@ -71,6 +72,7 @@ app.use("/api/planner", plannerRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/ai-chat", aiChatRoutes);
 app.use("/api/recommendations", recommendationRoutes);
+app.use("/api/notes", noteRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

@@ -391,6 +391,16 @@ const simulateCourse = ({ student, course, quizzesByLesson, ability, targetLesso
   return { progress, activities, finishedAt: t, completedAll: targetLessons >= lessons.length, totalLessons: lessons.length };
 };
 
+// Move every timestamp of a simulated history by `delta` milliseconds.
+const shiftHistory = (result, delta) => {
+  const move = (date) => new Date(date.getTime() + delta);
+  for (const entry of result.progress.completedLessons) entry.completedAt = move(entry.completedAt);
+  for (const entry of result.progress.lessonChecks) entry.submittedAt = move(entry.submittedAt);
+  for (const entry of result.progress.quizAttempts) entry.submittedAt = move(entry.submittedAt);
+  for (const activity of result.activities) activity.at += delta;
+  result.finishedAt += delta;
+};
+
 const seedStudents = async () => {
   const names = [...SHOWCASE.keys(), ...EXTRA_COURSES];
   const wanted = new Set(names.map(nameKey));
@@ -460,11 +470,20 @@ const seedStudents = async () => {
       Certificate.deleteMany({ student: user._id }),
     ]);
 
-    // Spread each course's history over the past weeks, ending before now.
+    // Simulate each course's history, then shift it so it ends recently:
+    // unfinished courses were active in the last day or two (the
+    // presentation account within the last few hours), finished courses
+    // ended earlier.
     for (const { course, target } of p.courses) {
-      const span = target * 1.6 * DAY + 2 * DAY;
-      const start = now - span - p.rand.int(1, 20) * DAY;
-      const result = simulateCourse({ student: user, course, quizzesByLesson: quizMap.get(String(course._id)), ability: p.ability, targetLessons: target, start, rand: p.rand });
+      const total = course.modules.reduce((n, m) => n + m.lessons.length, 0);
+      const result = simulateCourse({ student: user, course, quizzesByLesson: quizMap.get(String(course._id)), ability: p.ability, targetLessons: target, start: 0, rand: p.rand });
+      const finished = target >= total;
+      const endsAgo = p.index === 0
+        ? (finished ? p.rand.int(2, 9) * DAY : p.rand.int(2, 8) * 60 * MINUTE)
+        : (finished ? p.rand.int(2, 14) * DAY : p.rand.int(1, 60) * 60 * MINUTE);
+      const delta = now - endsAgo - result.finishedAt;
+      shiftHistory(result, delta);
+      const start = delta;
       const last = Math.min(result.finishedAt, now - 60 * MINUTE);
 
       const progressDoc = new CourseProgress({ user: user._id, course: course._id, ...result.progress });

@@ -55,3 +55,9 @@ export const submitAssignment = (
 
 // Student: all of their own submissions (status, PDF, marks, feedback)
 export const getMySubmissions = () => API.get('/progress/submissions/mine');
+
+// Student: dashboard summary — courses, streak, XP/level, weekly and monthly
+// activity, upcoming assignments, goals, badges and leaderboard. tz lets the
+// server count days (streak, "today") in the student's local time.
+export const getLearningSummary = () =>
+  API.get('/progress/summary', { params: { tz: new Date().getTimezoneOffset() } });

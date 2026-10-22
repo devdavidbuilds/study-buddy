@@ -17,6 +17,7 @@ import SearchBar from '../../components/ui/SearchBar';
 import PageState from '../../components/ui/PageState';
 import { getCourses } from '../../api/courseApi';
 import { getLevelColor } from '../../utils/helpers';
+import useLearningSummary from '../../hooks/useLearningSummary';
 
 const levels = [
   'All Levels',
@@ -165,6 +166,27 @@ export default function Courses() {
 
   const [courses, setCourses] = useState([]);
 
+  // The student's own progress per course (GET /api/progress/summary).
+  // Course documents don't carry per-student progress, so it is merged in
+  // here. Non-students simply see the catalog without progress.
+  const { summary } = useLearningSummary();
+  const progressById = useMemo(
+    () => new Map((summary?.courses || []).map((c) => [String(c._id), c])),
+    [summary]
+  );
+  const withProgress = (course) => {
+    const own = progressById.get(String(course._id || course.id));
+    return own
+      ? {
+          ...course,
+          progress: own.percentage,
+          completedLessons: own.completedLessons,
+          totalLessons: own.totalLessons,
+          nextLesson: own.nextLesson?.title || '',
+        }
+      : course;
+  };
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -266,7 +288,8 @@ export default function Courses() {
    * Courses currently being continued.
    */
   const continueLearning = useMemo(() => {
-    return courses
+    return (summary?.courses || [])
+      .map((c) => withProgress(normalizeCourse(c)))
       .filter(
         (course) =>
           course.progress > 0 &&
@@ -277,13 +300,13 @@ export default function Courses() {
           b.progress - a.progress
       )
       .slice(0, 4);
-  }, [courses]);
+  }, [summary]);
 
   /*
    * Filtering + sorting.
    */
   const filtered = useMemo(() => {
-    let list = courses.filter((course) => {
+    let list = courses.map(withProgress).filter((course) => {
       const title = String(
         course.title || ''
       ).toLowerCase();
@@ -423,6 +446,7 @@ export default function Courses() {
     category,
     courses,
     level,
+    progressById,
     query,
     sort,
   ]);
@@ -430,6 +454,7 @@ export default function Courses() {
   const visibleCourses = filtered;
 
   const completedCount =
+    summary?.stats?.coursesCompleted ??
     courses.filter(
       (course) =>
         course.progress === 100

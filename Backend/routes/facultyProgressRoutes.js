@@ -5,6 +5,7 @@ const {
   getCourseProgressOverview,
   getStudentProgressDetail,
 } = require("../controllers/facultyProgressController");
+const { getFacultyOverview } = require("../controllers/facultyOverviewController");
 
 const {
   protect,
@@ -21,6 +22,14 @@ const validateObjectId = require("../middleware/validateObjectId");
 // another faculty member's course analytics by changing the courseId,
 // and students cannot reach these routes at all (authorizeRoles).
 // ===============================
+
+// Dashboard figures across all of the faculty member's courses.
+router.get(
+  "/overview",
+  protect,
+  authorizeRoles("faculty", "admin"),
+  getFacultyOverview
+);
 
 // Course-level analytics + student list for a course the faculty owns.
 router.get(

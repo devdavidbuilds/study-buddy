@@ -9,3 +9,7 @@ export const getCourseProgressOverview = (courseId) =>
 // logged-in faculty owns (enforced server-side).
 export const getStudentProgressDetail = (courseId, studentId) =>
   API.get(`/faculty/courses/${courseId}/students/${studentId}/progress`);
+
+// Faculty dashboard figures across all of the faculty member's courses:
+// students, published assignments, average completion, recent activity.
+export const getFacultyOverview = () => API.get('/faculty/courses/overview');

@@ -1,89 +1,49 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Award, BookOpen, Flame, Zap } from 'lucide-react';
 import GlassCard from '../../components/ui/GlassCard';
 import ProgressRing from '../../components/ui/ProgressRing';
 import PageState from '../../components/ui/PageState';
-import { getCourses } from '../../api/courseApi';
 import useProfile from '../../hooks/useProfile';
+import useLearningSummary from '../../hooks/useLearningSummary';
+import { getMyCertificates, downloadCertificate } from '../../api/certificateApi';
 import { generateInitials } from '../../utils/helpers';
 
 export default function Profile() {
+  const navigate = useNavigate();
   const {
     profile,
     loading: profileLoading,
     error: profileError,
   } = useProfile();
+  const { summary, loading, error } = useLearningSummary();
 
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [certificates, setCertificates] = useState([]);
+  const [downloadingId, setDownloadingId] = useState('');
 
   useEffect(() => {
-    const loadCourses = async () => {
-      try {
-        const res = await getCourses();
-
-        setCourses(
-          Array.isArray(res?.data?.data)
-            ? res.data.data
-            : []
-        );
-      } catch (err) {
-        setError(
-          err?.response?.data?.message ||
-            'Unable to load profile courses.'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCourses();
+    getMyCertificates()
+      .then((res) => setCertificates(res?.data?.data || []))
+      .catch(() => setCertificates([]));
   }, []);
 
-  const completedCourses = courses.filter(
-    (c) => c.progress === 100
-  );
+  const handleDownload = async (certificate) => {
+    setDownloadingId(certificate.certificateId);
+    try {
+      await downloadCertificate(certificate);
+    } finally {
+      setDownloadingId('');
+    }
+  };
 
-  const earnedBadges = [
-    {
-      id: 1,
-      title: 'First Steps',
-      icon: '🌱',
-    },
-    {
-      id: 2,
-      title: 'Consistent Learner',
-      icon: '🔥',
-    },
-  ];
-
-  const inProgress = courses
-    .filter(
-      (c) =>
-        c.progress > 0 &&
-        c.progress < 100
-    )
+  // All figures come from the student's real records
+  // (GET /api/progress/summary and /api/certificates/mine).
+  const earnedBadges = (summary?.badges || []).filter((b) => b.earned);
+  const inProgress = (summary?.courses || [])
+    .filter((c) => c.percentage > 0 && c.percentage < 100)
     .slice(0, 4);
 
-  /*
-   * Backend uses "fullName".
-   * Some older frontend code may use "name".
-   * Support both so the existing UI continues working.
-   */
-  const currentUserName =
-    profile?.fullName ||
-    profile?.name ||
-    'Study Buddy';
-
-  const currentUserLevel =
-    profile?.level || 4;
-
-  const currentUserXP =
-    profile?.xp || 2400;
-
-  const currentUserStreak =
-    profile?.streak || 12;
+  const currentUserName = profile?.fullName || 'Study Buddy';
 
   if (profileLoading || loading) {
     return (
@@ -138,12 +98,13 @@ export default function Profile() {
               color: 'var(--text-tertiary)',
             }}
           >
-            {profile?.university ||
-              'Study Buddy Community'}
+            {[profile?.university, profile?.department, profile?.yearOfStudy ? `Year ${profile.yearOfStudy}` : '']
+              .filter(Boolean)
+              .join(' • ') || 'Study Buddy Community'}
           </p>
         </div>
 
-        <button className="btn btn-secondary">
+        <button className="btn btn-secondary" onClick={() => navigate('/settings')}>
           Edit Profile
         </button>
       </div>
@@ -161,7 +122,7 @@ export default function Profile() {
           />
 
           <div className="progress-stat-value gradient-text">
-            {currentUserStreak}
+            {summary.streak}
           </div>
 
           <div className="progress-stat-label">
@@ -180,11 +141,11 @@ export default function Profile() {
           />
 
           <div className="progress-stat-value gradient-text">
-            {currentUserXP.toLocaleString()}
+            {summary.xp.toLocaleString()}
           </div>
 
           <div className="progress-stat-label">
-            XP • Level {currentUserLevel}
+            XP • Level {summary.level}
           </div>
         </GlassCard>
 
@@ -199,7 +160,7 @@ export default function Profile() {
           />
 
           <div className="progress-stat-value gradient-text">
-            {courses.length}
+            {summary.stats.coursesEnrolled}
           </div>
 
           <div className="progress-stat-label">
@@ -241,19 +202,19 @@ export default function Profile() {
               📜 Certificates
             </h3>
 
-            {completedCourses.length > 0 ? (
-              completedCourses.map((course) => (
+            {certificates.length > 0 ? (
+              certificates.map((certificate) => (
                 <div
-                  key={course._id || course.id}
+                  key={certificate.certificateId}
                   className="certificate-row"
                 >
                   <div
                     className="certificate-icon"
                     style={{
-                      background: `${course.color || '#E75480'}22`,
+                      background: '#E7548022',
                     }}
                   >
-                    {course.thumbnail}
+                    🎓
                   </div>
 
                   <div style={{ flex: 1 }}>
@@ -264,7 +225,7 @@ export default function Profile() {
                         fontWeight: 600,
                       }}
                     >
-                      {course.title}
+                      {certificate.courseName}
                     </h5>
 
                     <span
@@ -276,12 +237,16 @@ export default function Profile() {
                       }}
                     >
                       Completed •{' '}
-                      {course.instructor}
+                      {new Date(certificate.issuedAt).toLocaleDateString()}
                     </span>
                   </div>
 
-                  <button className="btn btn-ghost btn-sm">
-                    Download
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => handleDownload(certificate)}
+                    disabled={downloadingId === certificate.certificateId}
+                  >
+                    {downloadingId === certificate.certificateId ? 'Preparing…' : 'Download'}
                   </button>
                 </div>
               ))
@@ -313,6 +278,11 @@ export default function Profile() {
                 flexWrap: 'wrap',
               }}
             >
+              {earnedBadges.length === 0 && (
+                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-tertiary)' }}>
+                  Complete lessons and quizzes to earn badges.
+                </p>
+              )}
               {earnedBadges.map((badge) => (
                 <div
                   key={badge.id}
@@ -362,15 +332,17 @@ export default function Profile() {
             {inProgress.length > 0 ? (
               inProgress.map((course) => (
                 <div
-                  key={course._id || course.id}
+                  key={course._id}
+                  onClick={() => navigate(`/courses/${course._id}`)}
                   style={{
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 'var(--space-3)',
                   }}
                 >
                   <ProgressRing
-                    value={course.progress}
+                    value={course.percentage}
                     size={54}
                     strokeWidth={5}
                     color={course.color}
@@ -390,7 +362,7 @@ export default function Profile() {
                         fontWeight: 600,
                       }}
                     >
-                      {course.title}
+                      {course.courseName}
                     </div>
 
                     <div

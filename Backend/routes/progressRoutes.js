@@ -8,6 +8,7 @@ const {
   submitLessonCheck,
   getMySubmissions,
 } = require("../controllers/progressController");
+const { getLearningSummary } = require("../controllers/summaryController");
 
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 const validateObjectId = require("../middleware/validateObjectId");
@@ -24,6 +25,15 @@ router.get(
   protect,
   authorizeRoles("student"),
   getMySubmissions
+);
+
+// Student: dashboard summary (courses, streak, XP, activity, goals,
+// badges, leaderboard). Also declared before "/:courseId".
+router.get(
+  "/summary",
+  protect,
+  authorizeRoles("student"),
+  getLearningSummary
 );
 
 // Get student's progress for a course

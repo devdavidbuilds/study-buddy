@@ -262,6 +262,11 @@ export default function CourseDetail() {
     ).toFixed(1);
   }, [course]);
 
+  // First lesson the student has not completed yet.
+  const nextLessonTitle = flattenedLessons.find(
+    (lesson) => !completedKeys.has(`${course?.modules?.[lesson.moduleIndex]?.id}::${lesson.id}`)
+  )?.title;
+
   const handleStartCourse = () => {
     navigate(`/courses/${id}/learn`);
   };
@@ -538,11 +543,10 @@ export default function CourseDetail() {
           >
             <Play size={16} />
 
-            {courseProgress > 0
-              ? `Continue: ${
-                  course.nextLesson ||
-                  'the next lesson'
-                }`
+            {courseProgress >= 100
+              ? 'Review Course'
+              : courseProgress > 0
+              ? `Continue: ${nextLessonTitle || 'the next lesson'}`
               : 'Start Course'}
           </button>
 

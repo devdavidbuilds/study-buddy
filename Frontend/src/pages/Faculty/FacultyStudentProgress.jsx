@@ -32,11 +32,10 @@ import {
   History,
   FileText,
 } from 'lucide-react';
-import { getCourses } from '../../api/courseApi';
-import { profile } from '../../api/authApi';
 import {
   getCourseProgressOverview,
   getStudentProgressDetail,
+  getFacultyOverview,
 } from '../../api/facultyProgressApi';
 import { generateInitials, getRelativeTime } from '../../utils/helpers';
 import './FacultyStudentProgress.css';
@@ -113,17 +112,11 @@ export default function FacultyStudentProgress({ onBack }) {
     setLoadingCourses(true);
     setCoursesError(null);
     try {
-      const profileRes = await profile();
-      const user = profileRes?.data?.user;
-      if (!user?._id) throw new Error('Unable to verify faculty identity');
-
-      const coursesRes = await getCourses({ limit: 200 });
-      const allCourses = coursesRes?.data?.data || [];
-      const myCourses = allCourses.filter((c) => {
-        const fid = c.faculty?._id || c.faculty;
-        return fid === user._id;
-      });
-      setCourses(myCourses);
+      // Courses this faculty member owns that have students, most students
+      // first. (The public catalog is paginated, so filtering its first
+      // page missed most courses.)
+      const overviewRes = await getFacultyOverview();
+      setCourses(overviewRes?.data?.data?.activeCourses || []);
     } catch (err) {
       console.error('FacultyStudentProgress courses fetch error:', err);
       setCoursesError(
@@ -292,8 +285,8 @@ export default function FacultyStudentProgress({ onBack }) {
           ) : courses.length === 0 ? (
             <div className="fsp-empty-state">
               <BookOpen size={36} className="fsp-empty-icon" />
-              <h3>No courses yet</h3>
-              <p>Create a course before viewing student progress.</p>
+              <h3>No students yet</h3>
+              <p>Courses appear here once students start learning in them.</p>
             </div>
           ) : (
             <div className="fsp-course-grid">
@@ -308,6 +301,7 @@ export default function FacultyStudentProgress({ onBack }) {
                     <h3>{course.courseName}</h3>
                     <span className="fsp-course-code">
                       <Hash size={11} /> {course.courseCode}
+                      {course.students ? ` · ${course.students} ${course.students === 1 ? 'student' : 'students'}` : ''}
                     </span>
                   </div>
                   <ChevronRight size={16} className="fsp-course-arrow" />

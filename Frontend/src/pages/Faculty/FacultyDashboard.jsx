@@ -25,6 +25,8 @@ import {
 import SakuraPetals from '../../components/ui/SakuraPetals';
 import { profile } from '../../api/authApi';
 import { getCourses, getMyFacultyCourses } from '../../api/courseApi';
+import { getFacultyOverview } from '../../api/facultyProgressApi';
+import { getRelativeTime } from '../../utils/helpers';
 import { setAuthToken } from '../../api/api';
 import FacultyMyCourses from './FacultyMyCourses';
 import FacultyCourseContent from './FacultyCourseContent';
@@ -108,6 +110,7 @@ export default function FacultyDashboard() {
   const [activeNav, setActiveNav] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [courseCount, setCourseCount] = useState('--');
+  const [overview, setOverview] = useState(null);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const navigate = useNavigate();
 
@@ -118,6 +121,11 @@ export default function FacultyDashboard() {
         const user = res?.data?.user;
         if (user) {
           setFacultyName(user.fullName || 'Faculty');
+
+          // Students, assignments, average progress and recent activity.
+          getFacultyOverview()
+            .then((overviewRes) => setOverview(overviewRes?.data?.data || null))
+            .catch(() => setOverview(null));
 
           // Fetch courses to populate stat card
           try {
@@ -188,21 +196,21 @@ export default function FacultyDashboard() {
     {
       key: 'students',
       label: 'Total Students',
-      value: '--',
+      value: overview ? overview.students : '--',
       icon: Users,
       gradient: 'stat-blue',
     },
     {
       key: 'assignments',
       label: 'Active Assignments',
-      value: '--',
+      value: overview ? overview.activeAssignments : '--',
       icon: ClipboardList,
       gradient: 'stat-amber',
     },
     {
       key: 'progress',
       label: 'Average Progress',
-      value: '--',
+      value: overview?.averageProgress != null ? `${overview.averageProgress}%` : '--',
       icon: BarChart3,
       gradient: 'stat-green',
     },
@@ -330,12 +338,21 @@ export default function FacultyDashboard() {
                 <Activity size={18} />
                 Recent Student Activity
               </h2>
-              <button className="fd-link-btn">
+              <button className="fd-link-btn" onClick={() => setActiveNav('student-progress')}>
                 View all <ChevronRight size={14} />
               </button>
             </div>
             <div className="fd-activity-list">
-              {placeholderActivity.map((item) => {
+              {(overview?.recentActivity?.length
+                ? overview.recentActivity.map((a) => ({
+                    id: a._id,
+                    icon: a.type === 'QUIZ_COMPLETED' ? ClipboardCheck : a.type === 'LESSON_COMPLETED' ? GraduationCap : FileText,
+                    text: a.score !== undefined ? `${a.text} — ${a.score}%` : a.text,
+                    time: getRelativeTime(a.createdAt),
+                    color: '',
+                  }))
+                : placeholderActivity
+              ).map((item) => {
                 const Icon = item.icon;
                 return (
                   <div key={item.id} className={`fd-activity-item ${item.color}`}>

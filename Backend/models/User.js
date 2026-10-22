@@ -77,6 +77,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    bio: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: [300, "Bio cannot exceed 300 characters"],
+    },
+    // Notification choices from the Settings page.
+    preferences: {
+      assignments: { type: Boolean, default: true },
+      courses: { type: Boolean, default: true },
+      achievements: { type: Boolean, default: true },
+      weeklyDigest: { type: Boolean, default: false },
+    },
 
     isActive: {
       type: Boolean,

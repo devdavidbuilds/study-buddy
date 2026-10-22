@@ -427,7 +427,9 @@ const getMyFacultyCourses = async (req, res) => {
           },
         },
       },
-      { $project: { modules: 0 } },
+      // Outcomes, skills and content-generation metadata are not shown on
+      // faculty list pages; leaving them out keeps the response small.
+      { $project: { modules: 0, outcomes: 0, skills: 0, contentMeta: 0 } },
       { $sort: { createdAt: -1 } },
     ]).allowDiskUse(true);
 

@@ -18,9 +18,8 @@ import {
   HelpCircle,
   Award,
 } from 'lucide-react';
-import { getCourses, getCourse } from '../../api/courseApi';
+import { getCourse, getMyFacultyCourses } from '../../api/courseApi';
 import { createQuiz, getQuizzesForLesson } from '../../api/quizApi';
-import { profile } from '../../api/authApi';
 import './FacultyQuizGenerator.css';
 
 const emptyQuestion = () => ({
@@ -65,17 +64,10 @@ export default function FacultyQuizGenerator({ onBack }) {
   const fetchMyCourses = async () => {
     setLoadingCourses(true);
     try {
-      const profileRes = await profile();
-      const user = profileRes?.data?.user;
-      if (!user?._id) return;
-
-      const coursesRes = await getCourses({ limit: 200 });
-      const allCourses = coursesRes?.data?.data || [];
-      const myCourses = allCourses.filter((c) => {
-        const fid = c.faculty?._id || c.faculty;
-        return fid === user._id;
-      });
-      setCourses(myCourses);
+      // All of this faculty member's courses (the public catalog is
+      // paginated, so filtering its first page missed most of them).
+      const coursesRes = await getMyFacultyCourses();
+      setCourses(coursesRes?.data?.data || []);
     } catch (err) {
       console.error('Failed to fetch courses:', err);
     } finally {

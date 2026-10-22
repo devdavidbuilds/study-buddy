@@ -35,12 +35,17 @@ export default function AITutor() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!messages.length) {
+    // The greeting is (re)written until the conversation starts, so it picks
+    // up the student's name and course once they have loaded.
+    const onlyGreeting = messages.length === 1 && messages[0].id === 1;
+    if (!messages.length || onlyGreeting) {
       const courseName = courseContext?.course?.courseName;
       const greeting = courseName
-        ? `Hi ${String(profile?.name || 'there').split(' ')[0]}! 🌸 I'm your AI Tutor. You're studying **${courseName}** — ask me anything about it, or any other topic!`
-        : `Hi ${String(profile?.name || 'there').split(' ')[0]}! 🌸 I'm your AI Tutor. Ask me anything — any subject, programming question, or concept.`;
-      setMessages([{ id: 1, role: 'ai', text: greeting }]);
+        ? `Hi ${String(profile?.fullName || 'there').split(' ')[0]}! 🌸 I'm your AI Tutor. You're studying **${courseName}** — ask me anything about it, or any other topic!`
+        : `Hi ${String(profile?.fullName || 'there').split(' ')[0]}! 🌸 I'm your AI Tutor. Ask me anything — any subject, programming question, or concept.`;
+      if (!onlyGreeting || messages[0].text !== greeting) {
+        setMessages([{ id: 1, role: 'ai', text: greeting }]);
+      }
     }
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, profile, courseContext]);
@@ -138,7 +143,7 @@ export default function AITutor() {
       <div className="ai-chat-window" ref={scrollRef}>
         {messages.map(m => (
           <div key={m.id} className={`ai-message ${m.role} animate-fade-in-up`}>
-            <div className="ai-message-avatar">{m.role === 'ai' ? '🌸' : String(profile?.name || 'S')[0]}</div>
+            <div className="ai-message-avatar">{m.role === 'ai' ? '🌸' : String(profile?.fullName || 'S')[0]}</div>
             {m.role === 'ai' ? (
               <div className="ai-message-bubble">
                 <LessonContentRenderer content={m.text} className="ai-markdown" />

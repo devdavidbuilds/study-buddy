@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import GlassCard from '../../components/ui/GlassCard';
 import PageState from '../../components/ui/PageState';
 import useProfile from '../../hooks/useProfile';
+import { updateProfile } from '../../api/profileApi';
 
 function Toggle({ on, onChange }) {
   return (
@@ -12,7 +13,7 @@ function Toggle({ on, onChange }) {
 }
 
 export default function Settings() {
-  const { profile, loading, error } = useProfile();
+  const { profile, loading, error, refresh } = useProfile();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
@@ -23,18 +24,32 @@ export default function Settings() {
     weeklyDigest: false,
   });
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     if (profile) {
-      setName(profile.name || '');
+      setName(profile.fullName || '');
       setEmail(profile.email || '');
       setBio(profile.bio || '');
+      if (profile.preferences) setNotifs((current) => ({ ...current, ...profile.preferences }));
     }
   }, [profile]);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  // Saves name, bio and notification preferences (PUT /api/auth/profile).
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      await updateProfile({ fullName: name, bio, preferences: notifs });
+      await refresh();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setSaveError(err?.response?.data?.message || 'Could not save your changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const inputStyle = { background: 'rgba(46,46,46,0.03)', border: '1px solid var(--border-color)' };
@@ -59,11 +74,11 @@ export default function Settings() {
         </div>
         <div className="input-group" style={{ marginBottom: 'var(--space-4)' }}>
           <label className="input-label">Email</label>
-          <input className="input-field" style={inputStyle} value={email} onChange={e => setEmail(e.target.value)} />
+          <input className="input-field" style={inputStyle} value={email} readOnly disabled title="Your email is your login and cannot be changed here" />
         </div>
         <div className="input-group">
           <label className="input-label">Bio</label>
-          <textarea className="input-field" style={{ ...inputStyle, minHeight: 80 }} value={bio} onChange={e => setBio(e.target.value)} />
+          <textarea className="input-field" style={{ ...inputStyle, minHeight: 80 }} value={bio} maxLength={300} onChange={e => setBio(e.target.value)} />
         </div>
       </GlassCard>
 
@@ -99,8 +114,11 @@ export default function Settings() {
         </div>
       </GlassCard>
 
-      <button className="btn btn-primary" onClick={handleSave}>
-        {saved ? 'Saved ✓' : 'Save Changes'}
+      {saveError && (
+        <p style={{ color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-3)' }}>{saveError}</p>
+      )}
+      <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save Changes'}
       </button>
     </div>
   );
