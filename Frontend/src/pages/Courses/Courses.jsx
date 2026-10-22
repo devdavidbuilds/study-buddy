@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Star,
@@ -174,17 +174,21 @@ export default function Courses() {
 
   // Enrollment status per course: approved courses can be started; others
   // open the course preview where the student can request enrollment.
-  const [enrollmentStatus, setEnrollmentStatus] = useState(new Map());
+  const [enrollments, setEnrollments] = useState([]);
+  const enrollmentStatus = useMemo(
+    () => new Map(enrollments.map((e) => [String(e.course?._id), e.status])),
+    [enrollments]
+  );
   useEffect(() => {
     getMyEnrollments()
-      .then((res) => setEnrollmentStatus(new Map((res?.data?.data || []).map((e) => [String(e.course?._id), e.status]))))
-      .catch(() => setEnrollmentStatus(new Map()));
+      .then((res) => setEnrollments(res?.data?.data || []))
+      .catch(() => setEnrollments([]));
   }, []);
   const progressById = useMemo(
     () => new Map((summary?.courses || []).map((c) => [String(c._id), c])),
     [summary]
   );
-  const withProgress = (course) => {
+  const withProgress = useCallback((course) => {
     const own = progressById.get(String(course._id || course.id));
     return own
       ? {
@@ -195,7 +199,7 @@ export default function Courses() {
           nextLesson: own.nextLesson?.title || '',
         }
       : course;
-  };
+  }, [progressById]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -295,22 +299,30 @@ export default function Courses() {
   };
 
   /*
-   * Courses currently being continued.
+   * My Courses: everything the student is enrolled in (with progress and
+   * the next lesson to resume), then requests still waiting for approval.
+   * In progress first, then not started, then completed.
    */
-  const continueLearning = useMemo(() => {
-    return (summary?.courses || [])
-      .map((c) => withProgress(normalizeCourse(c)))
-      .filter(
-        (course) =>
-          course.progress > 0 &&
-          course.progress < 100
-      )
-      .sort(
-        (a, b) =>
-          b.progress - a.progress
-      )
-      .slice(0, 4);
-  }, [summary]);
+  const myCourses = useMemo(() => {
+    const order = (c) => (c.percentage > 0 && c.percentage < 100 ? 0 : c.percentage === 0 ? 1 : 2);
+    const enrolled = (summary?.courses || [])
+      .filter((c) => enrollmentStatus.get(String(c._id)) !== 'pending')
+      .map((c) => ({ ...c, state: 'enrolled' }))
+      .sort((a, b) => order(a) - order(b) || new Date(b.lastActivityAt) - new Date(a.lastActivityAt));
+    const enrolledIds = new Set(enrolled.map((c) => String(c._id)));
+    const waiting = enrollments
+      .filter((e) => (e.status === 'pending' || e.status === 'rejected') && e.course && !enrolledIds.has(String(e.course._id)))
+      .map((e) => ({ ...e.course, percentage: 0, state: e.status }));
+    return [...enrolled, ...waiting];
+  }, [summary, enrollments, enrollmentStatus]);
+
+  const openMyCourse = (course) => {
+    if (course.state === 'enrolled' && course.nextLesson) {
+      navigate(`/courses/${course._id}/learn/${course.nextLesson.moduleId}/${course.nextLesson.lessonId}`);
+    } else {
+      navigate(`/courses/${course._id}`);
+    }
+  };
 
   /*
    * Filtering + sorting.
@@ -456,9 +468,9 @@ export default function Courses() {
     category,
     courses,
     level,
-    progressById,
     query,
     sort,
+    withProgress,
   ]);
 
   const visibleCourses = filtered;
@@ -551,79 +563,70 @@ export default function Courses() {
       </div>
 
       {/* =========================
-          CONTINUE LEARNING
+          MY COURSES (enrolled + requested)
       ========================== */}
 
-      {continueLearning.length > 0 && (
-        <div className="continue-strip-section">
+      <div className="continue-strip-section">
 
-          <h3 className="section-title">
-            🌸 Continue Learning
-          </h3>
+        <h3 className="section-title">
+          📚 My Courses
+          {myCourses.length > 0 && <span className="section-count">{myCourses.length}</span>}
+        </h3>
 
+        {myCourses.length === 0 ? (
+          <GlassCard compact>
+            <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
+              You haven't joined a course yet. Open any course below to preview it, then request enrollment — once your faculty approves, it appears here so you can continue in one click.
+            </p>
+          </GlassCard>
+        ) : (
           <div className="continue-strip">
+            {myCourses.map((course) => (
+              <GlassCard
+                key={course._id}
+                hoverable
+                compact
+                className="continue-card"
+                onClick={() => openMyCourse(course)}
+              >
+                <ProgressRing
+                  value={course.percentage || 0}
+                  size={52}
+                  strokeWidth={5}
+                  color={course.color}
+                />
 
-            {continueLearning.map(
-              (course) => {
+                <div className="continue-card-info">
+                  <h5 className="line-clamp-2">
+                    {course.courseName}
+                  </h5>
 
-                const courseId =
-                  course._id ||
-                  course.id;
+                  <span>
+                    {course.state === 'pending'
+                      ? '⏳ Awaiting faculty approval'
+                      : course.state === 'rejected'
+                      ? 'Request declined — view course'
+                      : course.percentage >= 100
+                      ? `Completed 🎉 · ${course.totalLessons} lessons`
+                      : course.percentage > 0
+                      ? `Next: ${course.nextLesson?.title || 'continue'} · ${course.completedLessons}/${course.totalLessons}`
+                      : `Start: ${course.nextLesson?.title || 'first lesson'}`}
+                  </span>
+                </div>
 
-                return (
-                  <GlassCard
-                    key={courseId}
-                    hoverable
-                    compact
-                    className="continue-card"
-                    onClick={() =>
-                      navigate(
-                        `/courses/${courseId}`
-                      )
-                    }
-                  >
-
-                    <ProgressRing
-                      value={
-                        course.progress || 0
-                      }
-                      size={52}
-                      strokeWidth={5}
-                      color={course.color}
-                    />
-
-                    <div className="continue-card-info">
-
-                      <h5 className="line-clamp-2">
-                        {course.title}
-                      </h5>
-
-                      <span>
-                        Next:{' '}
-                        {course.nextLesson ||
-                          'Continue where you left off'}
-                      </span>
-
-                    </div>
-
-                    <PlayCircle
-                      size={18}
-                      style={{
-                        color:
-                          course.color,
-                        flexShrink: 0,
-                      }}
-                    />
-
-                  </GlassCard>
-                );
-              }
-            )}
-
+                <PlayCircle
+                  size={18}
+                  style={{
+                    color: course.state === 'enrolled' ? course.color : 'var(--text-tertiary)',
+                    flexShrink: 0,
+                  }}
+                />
+              </GlassCard>
+            ))}
           </div>
+        )}
 
-        </div>
-      )}
+      </div>
 
       {/* =========================
           SEARCH + SORT
