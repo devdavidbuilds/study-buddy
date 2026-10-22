@@ -48,6 +48,8 @@ export default function LectureMaterials({ courseId, modules = [], accentColor }
       setActionError(
         err?.response?.status === 404
           ? `"${material.title}" is no longer available.`
+          : err?.response?.status === 403
+          ? 'Lecture materials open once your enrollment in this course is approved.'
           : `Could not ${kind === 'preview' ? 'open' : 'download'} "${material.title}". Please try again.`
       );
     } finally {

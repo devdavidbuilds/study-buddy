@@ -77,7 +77,24 @@ const authorizeRoles = (...roles) => {
   };
 };
 
+// For public routes that show more to some signed-in users: sets req.user
+// when a valid token is sent, otherwise continues anonymously (never 401).
+const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id).select("-password");
+      if (user && user.isActive) req.user = user;
+    }
+  } catch {
+    // Invalid or expired token: treat as anonymous.
+  }
+  next();
+};
+
 module.exports = {
   protect,
   authorizeRoles,
+  optionalAuth,
 };

@@ -4,6 +4,7 @@ const Assignment = require("../models/Assignment");
 const User = require("../models/User");
 const recordActivity = require("../utils/recordActivity");
 const { issueCertificate } = require("../utils/certificates");
+const { requireApprovedEnrollment } = require("../utils/enrollment");
 const {
   cleanOriginalName,
   fileUrlFor,
@@ -165,6 +166,8 @@ const markLessonComplete = async (req, res) => {
       });
     }
 
+    if (!(await requireApprovedEnrollment(req, res, course._id))) return;
+
     // Upsert progress document
     let progress = await CourseProgress.findOne({
       user: userId,
@@ -318,6 +321,8 @@ const submitAssignment = async (req, res) => {
         message: "Module and lesson must belong to this course.",
       });
     }
+
+    if (!(await requireApprovedEnrollment(req, res, course._id))) return;
 
     // Load the student's progress up front: a resubmission may keep the PDF
     // that was uploaded earlier.
@@ -569,6 +574,8 @@ const submitLessonCheck = async (req, res) => {
     if (!module || !lesson) {
       return res.status(400).json({ success: false, message: "Module and lesson must belong to this course." });
     }
+
+    if (!(await requireApprovedEnrollment(req, res, course._id))) return;
 
     const questions = Array.isArray(lesson.quiz) ? lesson.quiz : [];
     if (!questions.length) {

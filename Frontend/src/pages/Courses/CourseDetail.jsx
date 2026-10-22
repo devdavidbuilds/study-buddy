@@ -15,6 +15,9 @@ import {
   BookOpen,
   BarChart3,
   CheckCircle2,
+  Lock,
+  Hourglass,
+  Send,
 } from 'lucide-react';
 
 import GlassCard from '../../components/ui/GlassCard';
@@ -26,6 +29,7 @@ import { getCourse } from '../../api/courseApi';
 import { getRecommendations } from '../../api/recommendationApi';
 import { getCourseProgress } from '../../api/progressApi';
 import { logCourseOpened } from '../../api/activityApi';
+import { getMyEnrollment, requestEnrollment, cancelEnrollmentRequest } from '../../api/enrollmentApi';
 import { getLessonMinutes, formatMinutes } from '../../utils/lessonAssignment';
 import { generateInitials, getLevelColor } from '../../utils/helpers';
 
@@ -50,6 +54,14 @@ export default function CourseDetail() {
   const [error, setError] = useState('');
   const [studentProgress, setStudentProgress] = useState(null);
 
+  // 'full' = enrolled (or faculty/admin); 'preview' = outline only until
+  // the student's enrollment request is approved by faculty.
+  const [access, setAccess] = useState('full');
+  const [enrollment, setEnrollment] = useState(null);
+  const [enrollBusy, setEnrollBusy] = useState(false);
+  const [enrollError, setEnrollError] = useState('');
+  const canLearn = access === 'full';
+
   const loadCourse = async () => {
     setLoading(true);
     setError('');
@@ -64,6 +76,16 @@ export default function CourseDetail() {
         null;
 
       setCourse(selectedCourse);
+
+      const courseAccess = courseRes?.data?.access || 'full';
+      setAccess(courseAccess);
+      setEnrollment(null);
+      setEnrollError('');
+      if (courseAccess === 'preview') {
+        getMyEnrollment(id)
+          .then((res) => setEnrollment(res?.data?.data || { status: 'none' }))
+          .catch(() => setEnrollment({ status: 'none' }));
+      }
 
       // Similar courses from the ML recommender (TF-IDF + cosine
       // similarity). Non-blocking; if the recommendation service is
@@ -266,6 +288,32 @@ export default function CourseDetail() {
   const nextLessonTitle = flattenedLessons.find(
     (lesson) => !completedKeys.has(`${course?.modules?.[lesson.moduleIndex]?.id}::${lesson.id}`)
   )?.title;
+
+  const handleRequestEnrollment = async () => {
+    setEnrollBusy(true);
+    setEnrollError('');
+    try {
+      const res = await requestEnrollment(id);
+      setEnrollment(res?.data?.data || { status: 'pending' });
+    } catch (err) {
+      setEnrollError(err?.response?.data?.message || 'Could not send the request. Please try again.');
+    } finally {
+      setEnrollBusy(false);
+    }
+  };
+
+  const handleCancelEnrollment = async () => {
+    setEnrollBusy(true);
+    setEnrollError('');
+    try {
+      await cancelEnrollmentRequest(id);
+      setEnrollment({ status: 'none' });
+    } catch (err) {
+      setEnrollError(err?.response?.data?.message || 'Could not cancel the request.');
+    } finally {
+      setEnrollBusy(false);
+    }
+  };
 
   const handleStartCourse = () => {
     navigate(`/courses/${id}/learn`);
@@ -537,18 +585,39 @@ export default function CourseDetail() {
             color={courseColor}
           />
 
-          <button
-            className="hero-btn hero-btn-primary"
-            onClick={handleStartCourse}
-          >
-            <Play size={16} />
+          {canLearn ? (
+            <button
+              className="hero-btn hero-btn-primary"
+              onClick={handleStartCourse}
+            >
+              <Play size={16} />
 
-            {courseProgress >= 100
-              ? 'Review Course'
-              : courseProgress > 0
-              ? `Continue: ${nextLessonTitle || 'the next lesson'}`
-              : 'Start Course'}
-          </button>
+              {courseProgress >= 100
+                ? 'Review Course'
+                : courseProgress > 0
+                ? `Continue: ${nextLessonTitle || 'the next lesson'}`
+                : 'Start Course'}
+            </button>
+          ) : enrollment?.status === 'pending' ? (
+            <>
+              <button className="hero-btn hero-btn-primary" disabled style={{ opacity: 0.75, cursor: 'default' }}>
+                <Hourglass size={16} />
+                Awaiting faculty approval
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={handleCancelEnrollment} disabled={enrollBusy}>
+                Cancel request
+              </button>
+            </>
+          ) : (
+            <button
+              className="hero-btn hero-btn-primary"
+              onClick={handleRequestEnrollment}
+              disabled={enrollBusy || !enrollment}
+            >
+              <Send size={16} />
+              {enrollBusy ? 'Sending request…' : enrollment?.status === 'rejected' ? 'Request Again' : 'Request Enrollment'}
+            </button>
+          )}
 
           <div className="course-banner-actions">
 
@@ -585,6 +654,38 @@ export default function CourseDetail() {
         </div>
 
       </div>
+
+      {/* Enrollment status (course preview) */}
+      {!canLearn && enrollment && (
+        <GlassCard style={{ marginBottom: 'var(--space-6)' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
+            {enrollment.status === 'pending' ? (
+              <Hourglass size={20} style={{ color: 'var(--color-warning)', flexShrink: 0, marginTop: 2 }} />
+            ) : (
+              <Lock size={20} style={{ color: courseColor, flexShrink: 0, marginTop: 2 }} />
+            )}
+            <div>
+              <h3 className="section-title" style={{ marginBottom: 'var(--space-1)' }}>
+                {enrollment.status === 'pending'
+                  ? 'Enrollment request sent'
+                  : enrollment.status === 'rejected'
+                  ? 'Enrollment request declined'
+                  : 'Course preview'}
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
+                {enrollment.status === 'pending'
+                  ? `You asked to join this course${enrollment.requestedAt ? ` on ${new Date(enrollment.requestedAt).toLocaleDateString()}` : ''}. You can start the lessons as soon as the course faculty approves your request.`
+                  : enrollment.status === 'rejected'
+                  ? `The faculty declined your request${enrollment.decisionNote ? `: “${enrollment.decisionNote}”` : '.'} You can send a new request.`
+                  : 'Explore the overview and curriculum below. Request enrollment to unlock the lessons, quizzes and lecture notes — the course faculty will review your request.'}
+              </p>
+              {enrollError && (
+                <p style={{ color: 'var(--color-danger)', fontSize: 'var(--font-size-sm)', margin: 'var(--space-2) 0 0' }}>{enrollError}</p>
+              )}
+            </div>
+          </div>
+        </GlassCard>
+      )}
 
       {/* Main Content */}
       <div className="two-col-grid">
@@ -948,22 +1049,33 @@ export default function CourseDetail() {
 
                                   </div>
 
-                                  <button
-                                    className="btn btn-ghost btn-sm"
-                                    onClick={() =>
-                                      navigate(
-                                        `/courses/${id}/learn/${
-                                          module?.id || `module-${moduleIndex + 1}`
-                                        }/${lesson?.id || `lesson-${lessonIndex + 1}`}`
-                                      )
-                                    }
-                                  >
-                                    <Play size={14} />
+                                  {canLearn ? (
+                                    <button
+                                      className="btn btn-ghost btn-sm"
+                                      onClick={() =>
+                                        navigate(
+                                          `/courses/${id}/learn/${
+                                            module?.id || `module-${moduleIndex + 1}`
+                                          }/${lesson?.id || `lesson-${lessonIndex + 1}`}`
+                                        )
+                                      }
+                                    >
+                                      <Play size={14} />
 
-                                    {isLessonDone(module, lesson)
-                                      ? 'Review'
-                                      : 'Start'}
-                                  </button>
+                                      {isLessonDone(module, lesson)
+                                        ? 'Review'
+                                        : 'Start'}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="btn btn-ghost btn-sm"
+                                      disabled
+                                      title="Available after your enrollment is approved"
+                                    >
+                                      <Lock size={14} />
+                                      Locked
+                                    </button>
+                                  )}
 
                                 </div>
 

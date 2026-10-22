@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { isApprovedStudent, ENROLLMENT_REQUIRED_MESSAGE } = require("../utils/enrollment");
 const Course = require("../models/Course");
 const LectureMaterial = require("../models/LectureMaterial");
 const { removeFile } = require("../utils/submissionFiles");
@@ -320,6 +321,11 @@ const getMaterialFile = async (req, res) => {
     // Unauthorized users get the same 404 as missing files.
     if (!material || !course || !canViewCourseMaterials(course, req.user)) {
       return res.status(404).json({ success: false, message: "File not found." });
+    }
+    // Students can see the list of materials in the course preview, but
+    // opening a file needs an approved enrollment.
+    if (req.user.role === "student" && !(await isApprovedStudent(req.user._id, course._id))) {
+      return res.status(403).json({ success: false, code: "ENROLLMENT_REQUIRED", message: ENROLLMENT_REQUIRED_MESSAGE });
     }
 
     const stored = await openMaterialFile(material.file.fileId);

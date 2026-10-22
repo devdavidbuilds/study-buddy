@@ -2,6 +2,7 @@ const Quiz = require("../models/Quiz");
 const Course = require("../models/Course");
 const CourseProgress = require("../models/CourseProgress");
 const recordActivity = require("../utils/recordActivity");
+const { requireApprovedEnrollment } = require("../utils/enrollment");
 
 // ==============================
 // Helper: validate a raw questions array from the request body.
@@ -298,6 +299,8 @@ const submitQuiz = async (req, res) => {
     if (!quiz) {
       return res.status(404).json({ success: false, message: "Quiz not found for this lesson." });
     }
+
+    if (!(await requireApprovedEnrollment(req, res, courseId))) return;
 
     if (!Array.isArray(answers) || answers.length !== quiz.questions.length ||
         answers.some((answer) => !Number.isInteger(answer) || answer < 0 || answer > 3)) {

@@ -5,6 +5,7 @@ const Assignment = require("../models/Assignment");
 const StudyGoal = require("../models/StudyGoal");
 const StudySession = require("../models/StudySession");
 const User = require("../models/User");
+const Enrollment = require("../models/Enrollment");
 
 // ==============================
 // GET /api/progress/summary?tz=<minutes>
@@ -53,6 +54,16 @@ const getLearningSummary = async (req, res) => {
         .lean(),
       Certificate.find({ student: userId }).select("course courseName certificateId issuedAt").lean(),
     ]);
+
+    // Approved enrollments the student hasn't started yet still belong on
+    // the dashboard (0% complete).
+    const startedIds = new Set(progressDocs.map((p) => String(p.course)));
+    const approved = await Enrollment.find({ student: userId, status: "approved" }).select("course createdAt").lean();
+    for (const e of approved) {
+      if (!startedIds.has(String(e.course))) {
+        progressDocs.push({ course: e.course, completedLessons: [], lessonChecks: [], quizAttempts: [], assignments: [], createdAt: e.createdAt, updatedAt: e.createdAt });
+      }
+    }
 
     const courseDocs = await Course.find({ _id: { $in: progressDocs.map((p) => p.course) } })
       .select("courseName category thumbnail color level faculty modules.id modules.title modules.lessons.id modules.lessons.title modules.lessons.estimatedMinutes")

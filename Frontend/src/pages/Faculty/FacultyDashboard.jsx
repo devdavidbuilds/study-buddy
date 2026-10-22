@@ -21,6 +21,7 @@ import {
   Zap,
   ClipboardCheck,
   FolderOpen,
+  UserPlus,
 } from 'lucide-react';
 import SakuraPetals from '../../components/ui/SakuraPetals';
 import { profile } from '../../api/authApi';
@@ -35,6 +36,8 @@ import FacultySubmissions from './FacultySubmissions';
 import FacultyQuizGenerator from './FacultyQuizGenerator';
 import FacultyStudentProgress from './FacultyStudentProgress';
 import FacultyStudents from './FacultyStudents';
+import FacultyEnrollments from './FacultyEnrollments';
+import { getEnrollmentRequests } from '../../api/enrollmentApi';
 import FacultyLectureMaterials from './FacultyLectureMaterials';
 import './FacultyDashboard.css';
 
@@ -46,6 +49,7 @@ const sidebarItems = [
   { key: 'assignments', icon: ClipboardList, label: 'Assignments' },
   { key: 'submissions', icon: ClipboardCheck, label: 'Submissions & Evaluation' },
   { key: 'quiz-generator', icon: Brain, label: 'Quiz Creator' },
+  { key: 'enrollments', icon: UserPlus, label: 'Enrollment Requests' },
   { key: 'students', icon: Users, label: 'Students' },
   { key: 'student-progress', icon: TrendingUp, label: 'Student Progress' },
   { key: 'activity', icon: Activity, label: 'Activity' },
@@ -112,6 +116,7 @@ export default function FacultyDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [courseCount, setCourseCount] = useState('--');
   const [overview, setOverview] = useState(null);
+  const [pendingEnrollments, setPendingEnrollments] = useState(0);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const navigate = useNavigate();
 
@@ -122,6 +127,10 @@ export default function FacultyDashboard() {
         const user = res?.data?.user;
         if (user) {
           setFacultyName(user.fullName || 'Faculty');
+
+          getEnrollmentRequests('pending')
+            .then((enrollRes) => setPendingEnrollments(enrollRes?.data?.counts?.pending || 0))
+            .catch(() => setPendingEnrollments(0));
 
           // Students, assignments, average progress and recent activity.
           getFacultyOverview()
@@ -260,6 +269,15 @@ export default function FacultyDashboard() {
       return (
         <FacultyQuizGenerator
           onBack={() => setActiveNav('dashboard')}
+        />
+      );
+    }
+
+    if (activeNav === 'enrollments') {
+      return (
+        <FacultyEnrollments
+          onBack={() => setActiveNav('dashboard')}
+          onCountsChange={(counts) => setPendingEnrollments(counts.pending || 0)}
         />
       );
     }
@@ -455,6 +473,11 @@ export default function FacultyDashboard() {
               >
                 <Icon size={18} />
                 <span>{item.label}</span>
+                {item.key === 'enrollments' && pendingEnrollments > 0 && (
+                  <span className="fd-nav-badge" style={{ marginLeft: 'auto', background: 'var(--color-accent)', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>
+                    {pendingEnrollments}
+                  </span>
+                )}
               </button>
             );
           })}

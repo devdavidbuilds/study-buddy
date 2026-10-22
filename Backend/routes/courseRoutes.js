@@ -12,6 +12,7 @@ const {
 const {
   protect,
   authorizeRoles,
+  optionalAuth,
 } = require("../middleware/authMiddleware");
 const validateObjectId = require("../middleware/validateObjectId");
 
@@ -30,8 +31,9 @@ router.get(
   getMyFacultyCourses
 );
 
-// Get course by ID
-router.get("/:id", validateObjectId("id"), getCourseById);
+// Get course by ID — everyone sees the outline; lesson content only for
+// enrolled students, the course's faculty and admins (optional login).
+router.get("/:id", validateObjectId("id"), optionalAuth, getCourseById);
 
 // ===============================
 // Protected Routes

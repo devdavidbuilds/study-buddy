@@ -140,6 +140,9 @@ export default function CourseLearn() {
   // Data loading
   // ==============================
 
+  // 'preview' = the student is not enrolled (or not yet approved).
+  const [access, setAccess] = useState('full');
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -151,6 +154,7 @@ export default function CourseLearn() {
       ]);
 
       setCourse(courseRes?.data?.data ?? null);
+      setAccess(courseRes?.data?.access || 'full');
       setProgress(progressRes?.data?.data ?? null);
     } catch (err) {
       setError(
@@ -693,6 +697,19 @@ export default function CourseLearn() {
         title="Loading your lesson"
         message="Setting up the learning workspace…"
       />
+    );
+  }
+
+  if (access === 'preview') {
+    return (
+      <div className="empty-state" style={{ padding: 'var(--space-10)' }}>
+        <div className="empty-state-icon">🔒</div>
+        <h3>This course is locked</h3>
+        <p>Lessons open once your enrollment in this course is approved by the faculty. Request enrollment from the course page.</p>
+        <button className="btn btn-primary btn-sm" onClick={() => navigate(`/courses/${id}`)} style={{ marginTop: 'var(--space-4)' }}>
+          Go to course page
+        </button>
+      </div>
     );
   }
 

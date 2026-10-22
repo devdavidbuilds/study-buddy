@@ -1,6 +1,7 @@
 const validator = require("validator");
 const Course = require("../models/Course");
 const User = require("../models/User");
+const { canAccessCourseContent } = require("../utils/enrollment");
 
 // Answer keys and their explanations are only revealed by the server-side
 // lesson check (progressController.submitLessonCheck).
@@ -213,9 +214,23 @@ const getCourseById = async (req, res) => {
       });
     }
 
+    // Lesson content is for enrolled students, the course's faculty and
+    // admins; everyone else gets the outline (course preview).
+    const hasContent = await canAccessCourseContent(req.user, course);
+    const data = sanitizeCourse(course);
+    if (!hasContent) {
+      data.modules = (data.modules || []).map((module) => ({
+        ...module,
+        lessons: (module.lessons || []).map(({ id, title, duration, description, estimatedMinutes, done }) => ({
+          id, title, duration, description, estimatedMinutes, done, locked: true,
+        })),
+      }));
+    }
+
     res.status(200).json({
       success: true,
-      data: sanitizeCourse(course),
+      data,
+      access: hasContent ? "full" : "preview",
     });
   } catch (error) {
     console.error("Get Course Error:", error);

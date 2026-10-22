@@ -42,6 +42,7 @@ const User = require("../models/User");
 const CourseProgress = require("../models/CourseProgress");
 const StudentActivity = require("../models/StudentActivity");
 const Certificate = require("../models/Certificate");
+const Enrollment = require("../models/Enrollment");
 const { issueCertificate } = require("../utils/certificates");
 const {
   INCOMING_DIR, MATERIAL_TYPES, ensureIncomingDir, persistMaterialFile, removeMaterialFile, cleanMaterialName,
@@ -468,6 +469,7 @@ const seedStudents = async () => {
       CourseProgress.deleteMany({ user: user._id }),
       StudentActivity.deleteMany({ student: user._id }),
       Certificate.deleteMany({ student: user._id }),
+      Enrollment.deleteMany({ student: user._id }),
     ]);
 
     // Simulate each course's history, then shift it so it ends recently:
@@ -485,6 +487,12 @@ const seedStudents = async () => {
       shiftHistory(result, delta);
       const start = delta;
       const last = Math.min(result.finishedAt, now - 60 * MINUTE);
+
+      // Enrollment requested at the start and approved by the course's faculty.
+      await Enrollment.create({
+        student: user._id, course: course._id, status: "approved",
+        requestedAt: new Date(start - 6 * 60 * MINUTE), decidedAt: new Date(start - 60 * MINUTE), decidedBy: course.faculty,
+      });
 
       const progressDoc = new CourseProgress({ user: user._id, course: course._id, ...result.progress });
       const error = progressDoc.validateSync();

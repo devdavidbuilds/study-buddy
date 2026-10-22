@@ -18,6 +18,7 @@ import PageState from '../../components/ui/PageState';
 import { getCourses } from '../../api/courseApi';
 import { getLevelColor } from '../../utils/helpers';
 import useLearningSummary from '../../hooks/useLearningSummary';
+import { getMyEnrollments } from '../../api/enrollmentApi';
 
 const levels = [
   'All Levels',
@@ -170,6 +171,15 @@ export default function Courses() {
   // Course documents don't carry per-student progress, so it is merged in
   // here. Non-students simply see the catalog without progress.
   const { summary } = useLearningSummary();
+
+  // Enrollment status per course: approved courses can be started; others
+  // open the course preview where the student can request enrollment.
+  const [enrollmentStatus, setEnrollmentStatus] = useState(new Map());
+  useEffect(() => {
+    getMyEnrollments()
+      .then((res) => setEnrollmentStatus(new Map((res?.data?.data || []).map((e) => [String(e.course?._id), e.status]))))
+      .catch(() => setEnrollmentStatus(new Map()));
+  }, []);
   const progressById = useMemo(
     () => new Map((summary?.courses || []).map((c) => [String(c._id), c])),
     [summary]
@@ -945,9 +955,13 @@ export default function Courses() {
                     }}
                   >
 
-                    {course.progress > 0
-                      ? 'Continue Learning'
-                      : 'Start Course'}
+                    {enrollmentStatus.get(String(courseId)) === 'approved'
+                      ? course.progress > 0
+                        ? 'Continue Learning'
+                        : 'Start Course'
+                      : enrollmentStatus.get(String(courseId)) === 'pending'
+                      ? 'Awaiting Approval'
+                      : 'View Course'}
 
                     <ArrowRight
                       size={14}
