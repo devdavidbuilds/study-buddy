@@ -6,7 +6,7 @@
 //   node scripts/seedDemoData.js --apply                 every step
 //   (the students step needs DEMO_ACCOUNT_PASSWORD set in the environment)
 //   node scripts/seedDemoData.js --apply --step content  one step:
-//        content | quizzes | materials | students
+//        content | references | quizzes | materials | students
 //
 // content   Replaces each course's template lessons with structured,
 //           progressive lessons (scripts/demoContent): hand-written,
@@ -14,6 +14,9 @@
 //           hand-written curriculum per category for every other course.
 //           Module/lesson ids keep the module-N / lesson-N scheme, so
 //           existing progress records stay valid where lessons still exist.
+// references  A reading list per course (books, papers, documentation;
+//           scripts/demoContent/references.js): the category list, with
+//           course-specific items first for the showcase courses.
 // quizzes   One review quiz per module (Quiz collection), generated from
 //           that module's lesson-check questions. Upserted, so re-runs
 //           update rather than duplicate; faculty-made quizzes are untouched.
@@ -49,6 +52,7 @@ const {
 } = require("../utils/lectureMaterialFiles");
 const { buildCourse, moduleQuizzes } = require("./demoContent/build");
 const { buildLectureNotesPdf } = require("./demoContent/lectureNotesPdf");
+const { byCategory, referencesFor } = require("./demoContent/references");
 
 const APPLY = process.argv.includes("--apply");
 const STEP = (() => { const i = process.argv.indexOf("--step"); return i > -1 ? process.argv[i + 1] : "all"; })();
@@ -182,6 +186,29 @@ const seedContent = async (courses) => {
   log(`  course-specific: ${stats["course-specific"]}, category curriculum: ${stats["category-curriculum"]}, skipped: ${stats.skipped}`);
   log(`  new lesson data ≈ ${mb(stats.bytes)} (JSON)`);
   log("  topics:", Object.entries(topics).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t}=${n}`).join(", "));
+};
+
+// ------------------------------------------------------------
+// Step: references
+// ------------------------------------------------------------
+const seedReferences = async (courses) => {
+  for (const [category, list] of Object.entries(byCategory)) {
+    const error = new Course({ ...courses.find((c) => c.category === category), references: list }).validateSync();
+    if (error) throw new Error(`Reference validation failed for ${category}: ${error.message}`);
+    const n = courses.filter((c) => c.category === category).length;
+    log(`
+[references] ${category}: ${list.length} items for ${n} courses`);
+    if (APPLY) await Course.updateMany({ category }, { $set: { references: list } });
+  }
+  let special = 0;
+  for (const course of courses) {
+    const list = referencesFor(course.courseName, course.category);
+    if (list.length > (byCategory[course.category] || []).length) {
+      special += 1;
+      if (APPLY) await Course.updateOne({ _id: course._id }, { $set: { references: list } });
+    }
+  }
+  log(`[references] course-specific reading lists: ${special}`);
 };
 
 // ------------------------------------------------------------
@@ -529,6 +556,7 @@ const main = async () => {
   const courses = await Course.find({}, "courseName courseCode category level faculty department semester").lean();
 
   if (runs("content")) await seedContent(courses);
+  if (runs("references")) await seedReferences(courses);
   if (runs("quizzes")) await seedQuizzes();
   if (runs("materials")) await seedMaterials(courses);
   if (runs("students")) await seedStudents();

@@ -227,6 +227,29 @@ const courseSchema = new mongoose.Schema(
       default: [],
     },
 
+    // Reading list: books, research papers, documentation, standards and
+    // guides (no videos). Shown on the course page, including the preview.
+    references: {
+      type: [
+        {
+          type: {
+            type: String,
+            enum: ["book", "paper", "documentation", "standard", "guide"],
+            default: "guide",
+          },
+          title: { type: String, required: true, trim: true, maxlength: 300 },
+          authors: { type: String, default: "", trim: true, maxlength: 300 },
+          year: { type: Number, default: null },
+          source: { type: String, default: "", trim: true, maxlength: 200 },
+          url: { type: String, required: true, trim: true, maxlength: 500 },
+          note: { type: String, default: "", trim: true, maxlength: 300 },
+          access: { type: String, enum: ["free", "library"], default: "free" },
+          _id: false,
+        },
+      ],
+      default: [],
+    },
+
     rating: {
       type: Number,
       default: 0,

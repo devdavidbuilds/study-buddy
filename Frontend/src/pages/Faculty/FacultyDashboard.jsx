@@ -22,6 +22,7 @@ import {
   ClipboardCheck,
   FolderOpen,
   UserPlus,
+  MessageSquare,
 } from 'lucide-react';
 import SakuraPetals from '../../components/ui/SakuraPetals';
 import { profile } from '../../api/authApi';
@@ -37,6 +38,8 @@ import FacultyQuizGenerator from './FacultyQuizGenerator';
 import FacultyStudentProgress from './FacultyStudentProgress';
 import FacultyStudents from './FacultyStudents';
 import FacultyEnrollments from './FacultyEnrollments';
+import FacultyFeedback from './FacultyFeedback';
+import { getFacultyFeedback } from '../../api/feedbackApi';
 import { getEnrollmentRequests } from '../../api/enrollmentApi';
 import FacultyLectureMaterials from './FacultyLectureMaterials';
 import './FacultyDashboard.css';
@@ -50,6 +53,7 @@ const sidebarItems = [
   { key: 'submissions', icon: ClipboardCheck, label: 'Submissions & Evaluation' },
   { key: 'quiz-generator', icon: Brain, label: 'Quiz Creator' },
   { key: 'enrollments', icon: UserPlus, label: 'Enrollment Requests' },
+  { key: 'feedback', icon: MessageSquare, label: 'Course Feedback' },
   { key: 'students', icon: Users, label: 'Students' },
   { key: 'student-progress', icon: TrendingUp, label: 'Student Progress' },
   { key: 'activity', icon: Activity, label: 'Activity' },
@@ -117,6 +121,7 @@ export default function FacultyDashboard() {
   const [courseCount, setCourseCount] = useState('--');
   const [overview, setOverview] = useState(null);
   const [pendingEnrollments, setPendingEnrollments] = useState(0);
+  const [unrepliedFeedback, setUnrepliedFeedback] = useState(0);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const navigate = useNavigate();
 
@@ -127,6 +132,10 @@ export default function FacultyDashboard() {
         const user = res?.data?.user;
         if (user) {
           setFacultyName(user.fullName || 'Faculty');
+
+          getFacultyFeedback({ status: 'unreplied' })
+            .then((feedbackRes) => setUnrepliedFeedback(feedbackRes?.data?.data?.summary?.unreplied || 0))
+            .catch(() => setUnrepliedFeedback(0));
 
           getEnrollmentRequests('pending')
             .then((enrollRes) => setPendingEnrollments(enrollRes?.data?.counts?.pending || 0))
@@ -269,6 +278,15 @@ export default function FacultyDashboard() {
       return (
         <FacultyQuizGenerator
           onBack={() => setActiveNav('dashboard')}
+        />
+      );
+    }
+
+    if (activeNav === 'feedback') {
+      return (
+        <FacultyFeedback
+          onBack={() => setActiveNav('dashboard')}
+          onCountsChange={(n) => setUnrepliedFeedback(n)}
         />
       );
     }
@@ -473,9 +491,9 @@ export default function FacultyDashboard() {
               >
                 <Icon size={18} />
                 <span>{item.label}</span>
-                {item.key === 'enrollments' && pendingEnrollments > 0 && (
+                {((item.key === 'enrollments' && pendingEnrollments > 0) || (item.key === 'feedback' && unrepliedFeedback > 0)) && (
                   <span className="fd-nav-badge" style={{ marginLeft: 'auto', background: 'var(--color-accent)', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>
-                    {pendingEnrollments}
+                    {item.key === 'feedback' ? unrepliedFeedback : pendingEnrollments}
                   </span>
                 )}
               </button>

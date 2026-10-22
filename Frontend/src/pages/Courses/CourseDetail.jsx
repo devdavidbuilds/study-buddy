@@ -25,6 +25,8 @@ import ProgressBar from '../../components/ui/ProgressBar';
 import ProgressRing from '../../components/ui/ProgressRing';
 import PageState from '../../components/ui/PageState';
 import LectureMaterials from '../../components/course/LectureMaterials';
+import CourseReadingList from '../../components/course/CourseReadingList';
+import CourseFeedback from '../../components/course/CourseFeedback';
 import { getCourse } from '../../api/courseApi';
 import { getRecommendations } from '../../api/recommendationApi';
 import { getCourseProgress } from '../../api/progressApi';
@@ -37,7 +39,8 @@ const tabs = [
   { id: 'overview', label: 'Overview', icon: BarChart3 },
   { id: 'modules', label: 'Curriculum', icon: Play },
   { id: 'resources', label: 'Lecture Materials', icon: FileText },
-  { id: 'reviews', label: 'Reviews', icon: Star },
+  { id: 'reading', label: 'Reading List', icon: BookOpen },
+  { id: 'feedback', label: 'Feedback', icon: Star },
   { id: 'discussion', label: 'Discussion', icon: MessageCircle },
 ];
 
@@ -266,23 +269,6 @@ export default function CourseDetail() {
     Number(course?.progress) ??
     0;
 
-  const avgReviewRating = useMemo(() => {
-    const reviews = Array.isArray(course?.reviews)
-      ? course.reviews
-      : [];
-
-    if (!reviews.length) {
-      return '0.0';
-    }
-
-    return (
-      reviews.reduce(
-        (sum, review) =>
-          sum + (Number(review?.rating) || 0),
-        0
-      ) / reviews.length
-    ).toFixed(1);
-  }, [course]);
 
   // First lesson the student has not completed yet.
   const nextLessonTitle = flattenedLessons.find(
@@ -1150,130 +1136,19 @@ export default function CourseDetail() {
             </GlassCard>
           )}
 
-          {/* Reviews */}
-          {activeTab === 'reviews' && (
+          {/* Reading list: books, papers, documentation */}
+          {activeTab === 'reading' && (
             <GlassCard>
+              <h3 className="section-title">Reading List</h3>
+              <CourseReadingList references={Array.isArray(course.references) ? course.references : []} />
+            </GlassCard>
+          )}
 
-              <div className="reviews-summary">
-
-                <div className="reviews-summary-score">
-
-                  <strong>
-                    {avgReviewRating}
-                  </strong>
-
-                  <div className="reviews-summary-stars">
-
-                    {[1, 2, 3, 4, 5].map(
-                      (number) => (
-                        <Star
-                          key={number}
-                          size={14}
-                          fill={
-                            number <=
-                            Math.round(
-                              Number(
-                                avgReviewRating
-                              )
-                            )
-                              ? 'currentColor'
-                              : 'none'
-                          }
-                        />
-                      )
-                    )}
-
-                  </div>
-
-                  <span>
-                    {course.reviewsCount ?? 0}{' '}
-                    reviews
-                  </span>
-
-                </div>
-
-              </div>
-
-              {(course.reviews ?? []).map(
-                (review, index) => (
-                  <div
-                    key={
-                      review?.id ||
-                      `review-${index}`
-                    }
-                    className="discussion-item"
-                  >
-
-                    <div
-                      className="avatar sm"
-                      style={{
-                        background:
-                          review?.avatarColor ||
-                          courseColor,
-                      }}
-                    >
-                      {generateInitials(
-                        review?.name ||
-                          'Student'
-                      )}
-                    </div>
-
-                    <div className="discussion-item-body">
-
-                      <div>
-
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            fontSize:
-                              'var(--font-size-sm)',
-                          }}
-                        >
-                          {review?.name ||
-                            'Student'}
-                        </span>
-
-                        <span>
-                          {review?.date || ''}
-                        </span>
-
-                      </div>
-
-                      <div
-                        className="reviews-summary-stars"
-                        style={{
-                          margin: '4px 0',
-                        }}
-                      >
-
-                        {[1, 2, 3, 4, 5].map(
-                          (number) => (
-                            <Star
-                              key={number}
-                              size={12}
-                              fill={
-                                number <=
-                                (review?.rating ||
-                                  0)
-                                  ? 'currentColor'
-                                  : 'none'
-                              }
-                            />
-                          )
-                        )}
-
-                      </div>
-
-                      <p>
-                        {review?.text || ''}
-                      </p>
-
-                    </div>
-
-                  </div>
-                )
-              )}
-
+          {/* Feedback: ratings, comments, helpful votes, faculty replies */}
+          {activeTab === 'feedback' && (
+            <GlassCard>
+              <h3 className="section-title">Course Feedback</h3>
+              <CourseFeedback courseId={course?._id || id} />
             </GlassCard>
           )}
 
