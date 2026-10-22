@@ -201,7 +201,27 @@ const getRecommendationCatalog = async (req, res) => {
   }
 };
 
+// ==========================
+// Keep the recommender awake on Render. Free-tier services sleep after
+// ~15 idle minutes and take ~45 s to wake, longer than the 8 s request
+// timeout above. While this backend is running (i.e. while people use the
+// site) it pings the service at startup and every 10 minutes.
+// ==========================
+const KEEP_WARM_MS = 10 * 60 * 1000;
+
+const startRecommenderKeepWarm = () => {
+  const serviceUrl = getServiceUrl();
+  if (!process.env.RENDER || !serviceUrl) return;
+  const ping = () =>
+    axios.get(`${serviceUrl}/health`, { timeout: 90000 }).catch((error) => {
+      console.error("Recommender keep-warm ping failed:", error.code || error.response?.status || error.message);
+    });
+  ping();
+  setInterval(ping, KEEP_WARM_MS).unref();
+};
+
 module.exports = {
   getRecommendations,
   getRecommendationCatalog,
+  startRecommenderKeepWarm,
 };

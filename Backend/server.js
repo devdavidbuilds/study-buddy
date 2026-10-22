@@ -27,6 +27,7 @@ const plannerRoutes = require("./routes/plannerRoutes");
 const certificateRoutes = require("./routes/certificateRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const noteRoutes = require("./routes/noteRoutes");
+const { startRecommenderKeepWarm } = require("./controllers/recommendationController");
 
 connectDB();
 
@@ -94,4 +95,5 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Study Buddy Backend running on port ${PORT}`);
+  startRecommenderKeepWarm();
 });
