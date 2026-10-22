@@ -9,6 +9,7 @@ import CommandPalette from '../ui/CommandPalette';
 const pageTitles = {
   '/workspace': 'Home',
   '/courses': 'My Courses',
+  '/code-lab': 'Code Lab',
   '/planner': 'Planner',
   '/assignments': 'Assignments',
   '/ai-tutor': 'AI Tutor',

@@ -42,6 +42,7 @@ import FacultyFeedback from './FacultyFeedback';
 import { getFacultyFeedback } from '../../api/feedbackApi';
 import { getEnrollmentRequests } from '../../api/enrollmentApi';
 import FacultyLectureMaterials from './FacultyLectureMaterials';
+import ThemeToggle from '../../components/ui/ThemeToggle';
 import './FacultyDashboard.css';
 
 /* ── Sidebar nav items ──────────────────────── */
@@ -530,6 +531,7 @@ export default function FacultyDashboard() {
           </div>
 
           <div className="fd-topbar-right">
+            <ThemeToggle />
             <button className="fd-icon-btn" aria-label="Notifications">
               <Bell size={18} />
             </button>

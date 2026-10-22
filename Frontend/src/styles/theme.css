@@ -1,0 +1,442 @@
+/* ========================================
+   THEMES
+   1. Theme switch (both themes)
+   2. Appearance picker (Settings)
+   3. SAKURA MIDNIGHT — the dark theme
+   Loaded after every other stylesheet; dark rules are scoped to
+   [data-theme="dark"], so the light theme is unchanged.
+   ======================================== */
+
+/* ---------- 1. Theme switch ---------- */
+.theme-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 58px;
+  height: 30px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(231, 84, 128, 0.18);
+  overflow: hidden;
+  cursor: pointer;
+  background: linear-gradient(180deg, #BFE3FF 0%, #FBE3EE 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(231, 84, 128, 0.12);
+  transition: background var(--transition-slow), border-color var(--transition-slow), box-shadow var(--transition-slow);
+}
+.theme-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.theme-toggle:hover { box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 4px var(--color-primary-muted); }
+
+.theme-toggle-sky { position: absolute; inset: 0; }
+.tt-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 400ms ease, transform 500ms ease;
+}
+.tt-star.s1 { left: 9px; top: 8px; }
+.tt-star.s2 { left: 17px; top: 18px; width: 1.5px; height: 1.5px; transition-delay: 60ms; }
+.tt-star.s3 { left: 24px; top: 7px; width: 2.5px; height: 2.5px; transition-delay: 120ms; }
+.tt-cloud {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  width: 16px;
+  height: 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: -5px -3px 0 -1px rgba(255, 255, 255, 0.95), 4px -2px 0 -2px rgba(255, 255, 255, 0.95);
+  transition: transform 500ms ease, opacity 400ms ease;
+}
+
+/* The orb: a sun by day, a cratered moon at night. */
+.theme-toggle-orb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFE79A 0%, #FFC24B 60%, #F59E2E 100%);
+  box-shadow: 0 0 10px rgba(255, 190, 70, 0.75), 0 0 0 3px rgba(255, 214, 120, 0.25);
+  transition: transform 550ms cubic-bezier(0.34, 1.56, 0.64, 1), background 450ms ease, box-shadow 450ms ease;
+}
+.tt-crater {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(150, 120, 170, 0.45);
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.tt-crater.c1 { width: 6px; height: 6px; left: 5px; top: 6px; }
+.tt-crater.c2 { width: 4px; height: 4px; left: 12px; top: 13px; }
+
+.theme-toggle.is-dark {
+  background: linear-gradient(180deg, #1A1033 0%, #3A1640 100%);
+  border-color: rgba(244, 179, 206, 0.25);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 14px rgba(231, 84, 128, 0.25);
+}
+.theme-toggle.is-dark .theme-toggle-orb {
+  transform: translateX(28px) rotate(200deg);
+  background: radial-gradient(circle at 35% 35%, #FFFFFF 0%, #F3E9F5 55%, #D9C8E8 100%);
+  box-shadow: 0 0 12px rgba(244, 179, 206, 0.7), 0 0 0 3px rgba(244, 179, 206, 0.15);
+}
+.theme-toggle.is-dark .tt-crater { opacity: 1; }
+.theme-toggle.is-dark .tt-star { opacity: 1; transform: none; }
+.theme-toggle.is-dark .tt-cloud { opacity: 0; transform: translateY(10px); }
+
+/* The new theme spreads out from the switch (ThemeContext.setMode). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* ---------- 2. Appearance picker ---------- */
+.settings-section-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: calc(var(--space-2) * -1) 0 var(--space-4);
+}
+.appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.appearance-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border-color);
+  background: var(--input-bg);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.appearance-option:hover { transform: translateY(-2px); border-color: var(--border-color-hover); }
+.appearance-option.selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-muted), var(--shadow-glow-sm);
+}
+.appearance-title { font-weight: 600; font-size: var(--font-size-sm); color: var(--text-primary); margin-top: var(--space-2); }
+.appearance-note { font-size: 11.5px; color: var(--text-tertiary); line-height: 1.35; }
+
+.appearance-preview {
+  display: flex;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.ap-side { width: 24%; }
+.ap-main { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+.ap-line { height: 6px; width: 55%; border-radius: 4px; }
+.ap-cards { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ap-cards span { border-radius: 6px; }
+
+.preview-light { background: #FFFDF9; }
+.preview-light .ap-side { background: #FFF5F8; border-right: 1px solid #F6E1EA; }
+.preview-light .ap-line { background: linear-gradient(90deg, #E75480, #F8C8DC); }
+.preview-light .ap-cards span { background: #fff; box-shadow: 0 2px 6px rgba(180, 130, 150, 0.18); }
+
+.preview-dark {
+  background:
+    radial-gradient(circle at 80% 15%, rgba(231, 84, 128, 0.45), transparent 45%),
+    radial-gradient(circle at 20% 90%, rgba(120, 90, 220, 0.4), transparent 50%),
+    #0B0913;
+}
+.preview-dark .ap-side { background: rgba(20, 15, 32, 0.9); border-right: 1px solid rgba(255, 255, 255, 0.06); }
+.preview-dark .ap-line { background: linear-gradient(90deg, #FF7AA8, #B79CFF); }
+.preview-dark .ap-cards span { background: rgba(30, 24, 46, 0.85); border: 1px solid rgba(244, 179, 206, 0.25); }
+
+.preview-system { background: linear-gradient(90deg, #FFFDF9 0 50%, #0B0913 50% 100%); }
+.preview-system .ap-side { background: #FFF5F8; }
+.preview-system .ap-line { background: linear-gradient(90deg, #E75480, #B79CFF); }
+.preview-system .ap-cards span:first-child { background: #fff; box-shadow: 0 2px 6px rgba(180, 130, 150, 0.18); }
+.preview-system .ap-cards span:last-child { background: rgba(30, 24, 46, 0.9); border: 1px solid rgba(244, 179, 206, 0.25); }
+
+@media (max-width: 560px) {
+  .appearance-grid { grid-template-columns: 1fr; }
+  .appearance-preview { aspect-ratio: 16 / 6; }
+}
+
+/* ========================================
+   3. SAKURA MIDNIGHT
+   A night garden: ink-violet sky, aurora glow behind the content,
+   slowly twinkling stars, glowing petals and frosted cards with a
+   neon-sakura edge.
+   ======================================== */
+
+[data-theme="dark"] {
+  --bg-primary: #0A0812;
+  --bg-surface: #12101C;
+  --bg-card: #171325;
+  --bg-card-hover: #1D182E;
+  --bg-elevated: #1B1629;
+  --bg-sunken: #07060D;
+
+  --color-primary: #FF9EC4;
+  --color-primary-hover: #FFB8D3;
+  --color-primary-muted: rgba(255, 122, 168, 0.14);
+  --color-secondary: #241B38;
+  --color-accent: #FF5C93;
+  --color-accent-hover: #FF7AA8;
+  --color-accent-muted: rgba(255, 92, 147, 0.16);
+  --color-lavender: #B79CFF;
+  --color-lavender-muted: rgba(183, 156, 255, 0.14);
+  --color-aurora: #5CE1E6;
+
+  --text-primary: #F3ECF4;
+  --text-secondary: #B3A8BF;
+  --text-tertiary: #8A7F98;
+  --text-muted: #625874;
+
+  --border-color: rgba(214, 190, 255, 0.09);
+  --border-color-hover: rgba(255, 122, 168, 0.38);
+  --border-color-active: rgba(255, 122, 168, 0.55);
+
+  --card-bg: linear-gradient(155deg, rgba(31, 25, 48, 0.82) 0%, rgba(18, 15, 30, 0.78) 100%);
+  --input-bg: rgba(255, 255, 255, 0.04);
+
+  --gradient-primary: linear-gradient(135deg, #FF9EC4 0%, #FF5C93 55%, #B79CFF 100%);
+  --gradient-accent: linear-gradient(135deg, #FF5C93 0%, #C04CFD 100%);
+  --gradient-secondary: linear-gradient(135deg, #241B38 0%, #171325 100%);
+  --gradient-hero: linear-gradient(160deg, #0A0812 0%, #140F22 50%, #1C1230 100%);
+  --gradient-card: linear-gradient(145deg, rgba(255, 122, 168, 0.07) 0%, rgba(183, 156, 255, 0.04) 100%);
+
+  --shadow-glow: 0 0 24px rgba(255, 92, 147, 0.28), 0 0 70px rgba(183, 156, 255, 0.12);
+  --shadow-glow-sm: 0 0 16px rgba(255, 92, 147, 0.25);
+
+  --glass-bg: rgba(18, 15, 30, 0.72);
+  --glass-bg-light: rgba(10, 8, 18, 0.6);
+  --glass-border: rgba(214, 190, 255, 0.1);
+}
+
+/* ---- The sky: aurora + stars behind everything ---- */
+[data-theme="dark"] body {
+  background-color: var(--bg-primary);
+}
+[data-theme="dark"] body::before,
+[data-theme="dark"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+/* Aurora: three soft lights that drift very slowly. */
+[data-theme="dark"] body::before {
+  background:
+    radial-gradient(42vw 34vw at 88% 4%, rgba(255, 92, 147, 0.20), transparent 70%),
+    radial-gradient(48vw 40vw at 8% 100%, rgba(122, 92, 255, 0.20), transparent 70%),
+    radial-gradient(36vw 28vw at 52% 55%, rgba(92, 225, 230, 0.06), transparent 70%);
+  animation: sb-aurora 26s ease-in-out infinite alternate;
+}
+/* Stars: two layers of tiny dots that twinkle out of step. */
+[data-theme="dark"] body::after {
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 18%, rgba(255, 255, 255, 0.75), transparent 100%),
+    radial-gradient(1px 1px at 27% 72%, rgba(255, 255, 255, 0.55), transparent 100%),
+    radial-gradient(1.4px 1.4px at 41% 33%, rgba(255, 214, 236, 0.8), transparent 100%),
+    radial-gradient(1px 1px at 58% 12%, rgba(255, 255, 255, 0.6), transparent 100%),
+    radial-gradient(1.2px 1.2px at 66% 64%, rgba(214, 200, 255, 0.7), transparent 100%),
+    radial-gradient(1px 1px at 79% 41%, rgba(255, 255, 255, 0.55), transparent 100%),
+    radial-gradient(1.6px 1.6px at 91% 83%, rgba(255, 214, 236, 0.75), transparent 100%),
+    radial-gradient(1px 1px at 5% 52%, rgba(255, 255, 255, 0.5), transparent 100%),
+    radial-gradient(1.2px 1.2px at 35% 91%, rgba(255, 255, 255, 0.6), transparent 100%),
+    radial-gradient(1px 1px at 72% 92%, rgba(214, 200, 255, 0.6), transparent 100%);
+  background-size: 620px 620px;
+  animation: sb-twinkle 6s ease-in-out infinite alternate;
+}
+@keyframes sb-aurora {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.9; }
+  50% { transform: translate3d(-2vw, 1.5vh, 0) scale(1.05); opacity: 1; }
+  100% { transform: translate3d(1.5vw, -1vh, 0) scale(1.02); opacity: 0.85; }
+}
+@keyframes sb-twinkle {
+  0% { opacity: 0.35; }
+  100% { opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="dark"] body::before,
+  [data-theme="dark"] body::after { animation: none; }
+}
+
+/* Let the sky show through the app shell. */
+[data-theme="dark"] .app-layout,
+[data-theme="dark"] .app-main,
+[data-theme="dark"] .app-content {
+  background: transparent;
+}
+
+/* ---- Petals become glowing blossoms drifting through the night ---- */
+[data-theme="dark"] .petal svg path { fill: #FFB3D1; }
+[data-theme="dark"] .petal:nth-child(3n) svg path { fill: #CDB8FF; }
+[data-theme="dark"] .petal:nth-child(5n) svg path { fill: #FFFFFF; }
+[data-theme="dark"] .petal {
+  filter: drop-shadow(0 0 6px rgba(255, 122, 168, 0.75)) drop-shadow(0 0 14px rgba(255, 92, 147, 0.35));
+}
+
+/* ---- Shell ---- */
+[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, rgba(20, 16, 33, 0.88) 0%, rgba(12, 10, 21, 0.92) 100%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-right: 1px solid var(--border-color);
+}
+[data-theme="dark"] .topbar {
+  background: rgba(10, 8, 18, 0.62);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--border-color);
+}
+[data-theme="dark"] .nav-item.active {
+  background: linear-gradient(90deg, rgba(255, 92, 147, 0.2) 0%, rgba(183, 156, 255, 0.08) 100%);
+  color: #FFE3EE;
+  box-shadow: inset 3px 0 0 #FF5C93, 0 0 22px rgba(255, 92, 147, 0.12);
+}
+[data-theme="dark"] .nav-item.active svg { color: #FF8DB6; filter: drop-shadow(0 0 6px rgba(255, 92, 147, 0.6)); }
+[data-theme="dark"] .bottom-nav {
+  background: rgba(14, 11, 24, 0.86);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* ---- Cards: frosted night glass with a neon-sakura edge on hover ---- */
+[data-theme="dark"] .glass-card-component {
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .glass-card-component:hover {
+  border-color: rgba(255, 122, 168, 0.28);
+}
+[data-theme="dark"] .glass-card-component.hoverable:hover {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 18px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 122, 168, 0.18), 0 0 36px rgba(255, 92, 147, 0.16);
+}
+
+/* ---- Page titles shimmer from moonlight to sakura ---- */
+[data-theme="dark"] .page-header h1 {
+  background: linear-gradient(100deg, #FFFFFF 0%, #FFD3E4 45%, #C9B3FF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Controls ---- */
+[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #FF5C93 0%, #E0408A 50%, #A64CFF 130%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(255, 92, 147, 0.3);
+}
+[data-theme="dark"] .btn-primary:hover:not(:disabled) {
+  box-shadow: 0 8px 28px rgba(255, 92, 147, 0.45), 0 0 0 1px rgba(255, 179, 209, 0.4) inset;
+}
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn-ghost,
+[data-theme="dark"] .btn-outline {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .btn-ghost:hover,
+[data-theme="dark"] .btn-outline:hover {
+  background: rgba(255, 122, 168, 0.1);
+  border-color: var(--border-color-hover);
+}
+[data-theme="dark"] .input-field,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea:not(.codelab-console-textarea) {
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+/* Inputs that sit inside their own styled box stay see-through. */
+[data-theme="dark"] .search-bar input,
+[data-theme="dark"] .search-bar input:focus {
+  background: transparent;
+  box-shadow: none;
+}
+[data-theme="dark"] .search-bar {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .search-bar:focus-within {
+  border-color: rgba(255, 122, 168, 0.45);
+  box-shadow: 0 0 0 3px rgba(255, 92, 147, 0.12), 0 0 24px rgba(255, 92, 147, 0.12);
+}
+[data-theme="dark"] .search-shortcut {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-color);
+  color: var(--text-tertiary);
+}
+[data-theme="dark"] .wishlist-btn {
+  background: rgba(10, 8, 18, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #FFD3E4;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: var(--text-muted); }
+[data-theme="dark"] .input-field:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:not(.codelab-console-textarea):focus {
+  border-color: rgba(255, 122, 168, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 92, 147, 0.15);
+}
+[data-theme="dark"] select option { background: #171325; color: var(--text-primary); }
+[data-theme="dark"] .toggle-switch { background: rgba(255, 255, 255, 0.12); }
+[data-theme="dark"] .toggle-switch.on { background: linear-gradient(135deg, #FF5C93, #B05CFF); box-shadow: 0 0 12px rgba(255, 92, 147, 0.4); }
+
+/* ---- Scrollbars & selection ---- */
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(255, 122, 168, 0.35), rgba(183, 156, 255, 0.3)); }
+[data-theme="dark"] ::selection { background: rgba(255, 92, 147, 0.45); color: #fff; }
+
+/* ---- Tabs ---- */
+[data-theme="dark"] .tab-item.active {
+  background: linear-gradient(135deg, #FF5C93 0%, #C04CFD 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(255, 92, 147, 0.35);
+}
+
+/* ---- Code Lab chrome (the editor and console are already dark) ---- */
+[data-theme="dark"] .codelab-shell { background: transparent; }
+[data-theme="dark"] .codelab-header {
+  background: rgba(14, 11, 24, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+[data-theme="dark"] .codelab-toolbar { background: rgba(18, 15, 30, 0.75); }
+
+/* ---- Landing ---- */
+[data-theme="dark"] .landing-nav {
+  background: rgba(10, 8, 18, 0.6);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--border-color);
+}
+[data-theme="dark"] .sakura-silhouette {
+  background: linear-gradient(180deg, transparent 0%, rgba(10, 8, 18, 0.9) 100%);
+}
+[data-theme="dark"] .orb { opacity: 0.35; }
+
+/* Login / sign-up have no nav bar, so the switch floats in the corner. */
+.floating-theme-toggle {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  z-index: 50;
+}
+
+/* Phones: the switch needs the room, so the breadcrumb shows only the page. */
+@media (max-width: 640px) {
+  .topbar-breadcrumb span { display: none; }
+  .topbar-breadcrumb strong { white-space: nowrap; }
+}

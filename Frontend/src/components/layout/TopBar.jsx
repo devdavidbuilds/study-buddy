@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Bell, Command, Menu } from 'lucide-react';
 import SearchBar from '../ui/SearchBar';
+import ThemeToggle from '../ui/ThemeToggle';
 
 export default function TopBar({ onCommandOpen, onMobileMenuToggle, pageTitle }) {
   const unread = 0;
@@ -28,6 +29,7 @@ export default function TopBar({ onCommandOpen, onMobileMenuToggle, pageTitle })
       </div>
 
       <div className="topbar-right">
+        <ThemeToggle />
         <button className="topbar-icon-btn" onClick={onCommandOpen} title="Command Palette">
           <Command size={18} />
         </button>

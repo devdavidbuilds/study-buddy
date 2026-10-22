@@ -47,8 +47,13 @@
   scrollbar-width: none;
 }
 .continue-scroll::-webkit-scrollbar { display: none; }
-.continue-card {
-  min-width: 280px; cursor: pointer;
+/* .continue-scroll scopes this away from the Courses page's row-style .continue-card. */
+.continue-scroll .continue-card {
+  display: block;
+  min-width: 280px;
+  max-width: 320px;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 .continue-card .course-emoji { font-size: 2rem; margin-bottom: var(--space-3); }
 .continue-card .course-title { font-weight: var(--font-weight-semibold); font-size: var(--font-size-sm); margin-bottom: var(--space-1); }

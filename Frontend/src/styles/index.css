@@ -15,6 +15,8 @@
   --bg-card-hover: #FFF8FB;
   --bg-elevated: #FFFFFF;
   --bg-sunken: #FDF6F0;
+  --card-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 253, 249, 0.85) 100%);
+  --input-bg: rgba(46, 46, 46, 0.03);
 
   --color-primary: #F8C8DC;
   --color-primary-hover: #F4B3CE;

@@ -3,6 +3,13 @@ import GlassCard from '../../components/ui/GlassCard';
 import PageState from '../../components/ui/PageState';
 import useProfile from '../../hooks/useProfile';
 import { updateProfile } from '../../api/profileApi';
+import { useTheme } from '../../context/ThemeContext';
+
+const APPEARANCE = [
+  { mode: 'light', title: 'Sakura Day', note: 'Soft blush and paper white' },
+  { mode: 'dark', title: 'Sakura Midnight', note: 'Aurora glow and starlight' },
+  { mode: 'system', title: 'Match system', note: 'Follows your device setting' },
+];
 
 function Toggle({ on, onChange }) {
   return (
@@ -14,6 +21,7 @@ function Toggle({ on, onChange }) {
 
 export default function Settings() {
   const { profile, loading, error, refresh } = useProfile();
+  const { mode, setMode } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
@@ -52,7 +60,7 @@ export default function Settings() {
     }
   };
 
-  const inputStyle = { background: 'rgba(46,46,46,0.03)', border: '1px solid var(--border-color)' };
+  const inputStyle = { background: 'var(--input-bg)', border: '1px solid var(--border-color)' };
 
   if (loading) return <PageState title="Loading settings" message="Loading your profile preferences…" />;
   if (error) return <PageState type="error" title="Unable to load settings" message={error} />;
@@ -65,6 +73,36 @@ export default function Settings() {
           <p>Manage your profile and preferences</p>
         </div>
       </div>
+
+      <GlassCard className="settings-section">
+        <h3>Appearance</h3>
+        <p className="settings-section-note">Pick a mode. It changes instantly and is remembered on this device.</p>
+        <div className="appearance-grid" role="radiogroup" aria-label="Theme">
+          {APPEARANCE.map(option => (
+            <button
+              key={option.mode}
+              type="button"
+              role="radio"
+              aria-checked={mode === option.mode}
+              className={`appearance-option ${mode === option.mode ? 'selected' : ''}`}
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setMode(option.mode, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+              }}
+            >
+              <span className={`appearance-preview preview-${option.mode}`} aria-hidden="true">
+                <span className="ap-side" />
+                <span className="ap-main">
+                  <span className="ap-line wide" />
+                  <span className="ap-cards"><span /><span /></span>
+                </span>
+              </span>
+              <span className="appearance-title">{option.title}</span>
+              <span className="appearance-note">{option.note}</span>
+            </button>
+          ))}
+        </div>
+      </GlassCard>
 
       <GlassCard className="settings-section">
         <h3>Profile</h3>

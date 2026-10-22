@@ -14,6 +14,7 @@ import Button from '../../components/ui/Button';
 import GlassCard from '../../components/ui/GlassCard';
 import { login } from '../../api/authApi';
 import { setAuthToken, unreachableMessage } from '../../api/api';
+import ThemeToggle from '../../components/ui/ThemeToggle';
 import './Login.css';
 
 export default function Login() {
@@ -90,6 +91,7 @@ export default function Login() {
 
   return (
     <div className="login-page">
+      <ThemeToggle className="floating-theme-toggle" />
       <div className="login-illustration">
         <div className="illustration-content">
           <span className="illustration-icon">🎓</span>

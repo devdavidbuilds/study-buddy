@@ -22,6 +22,7 @@ import { getCourses } from '../../api/courseApi';
 import { generateInitials } from '../../utils/helpers';
 import GlassCard from '../../components/ui/GlassCard';
 import SakuraPetals from '../../components/ui/SakuraPetals';
+import ThemeToggle from '../../components/ui/ThemeToggle';
 import './Landing.css';
 
 /* ---- Lucide icon lookup (features + stats) ---- */
@@ -74,7 +75,9 @@ export default function Landing() {
     { id: 1, name: 'Mina', role: 'Computer Science', text: 'The experience feels premium and calm while still pushing me to improve.', avatarColor: '#F8C8DC', rating: 5 },
     { id: 2, name: 'Jay', role: 'Engineering Student', text: 'I finally have one place for planning, coding, and reviewing progress.', avatarColor: '#C9B6E4', rating: 5 },
   ];
-  const heroCourse = courses[2] || { thumbnail: '📘', title: 'AI for Developers', progress: 45 };
+  // Decorative preview card: catalog courses carry no progress, so show a sample value.
+  const heroBase = courses[2] || { thumbnail: '📘', title: 'AI for Developers' };
+  const heroCourse = { ...heroBase, title: heroBase.title || heroBase.courseName, progress: heroBase.progress ?? 45 };
 
   return (
     <div className="landing-page">
@@ -95,6 +98,7 @@ export default function Landing() {
         </div>
 
         <div className="landing-nav-actions">
+          <ThemeToggle />
           <Link to="/login"><button className="nav-btn nav-btn-ghost">Log In</button></Link>
           <Link to="/login"><button className="nav-btn nav-btn-primary">Sign Up</button></Link>
         </div>

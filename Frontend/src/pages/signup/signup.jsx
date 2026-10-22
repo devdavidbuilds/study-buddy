@@ -17,6 +17,7 @@ import Button from '../../components/ui/Button';
 import GlassCard from '../../components/ui/GlassCard';
 import { register } from '../../api/authApi';
 import { setAuthToken, unreachableMessage } from '../../api/api';
+import ThemeToggle from '../../components/ui/ThemeToggle';
 import '../Login/Login.css';
 
 const PHONE_PATTERN = /^\+?[0-9\s-]{7,20}$/;
@@ -147,6 +148,7 @@ export default function Signup() {
 
   return (
     <div className="login-page">
+      <ThemeToggle className="floating-theme-toggle" />
       {/* Left Illustration */}
       <div className="login-illustration">
         <div className="illustration-content">
