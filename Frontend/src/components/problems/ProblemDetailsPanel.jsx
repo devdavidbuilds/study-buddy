@@ -30,14 +30,14 @@ export default function ProblemDetailsPanel({ problem, solved }) {
 
           <h4>How to use</h4>
           <p className="codelab-format-text">
-            <Play size={12} /> Press <strong>Run</strong> to execute it. The printed result appears in the Output tab of the console.
-            Edit the code freely — <strong>Reset</strong> restores the original.
+            <Play size={12} /> Press <strong>Run</strong> to execute it in the console's Terminal. When the program asks for
+            input, type it there and press Enter. Edit the code freely — <strong>Reset</strong> restores the original.
           </p>
 
           {problem.sampleInput && (
             <>
               <h4>Sample input</h4>
-              <p className="codelab-format-text">Pre-filled in the console's Input tab. Change it and run again.</p>
+              <p className="codelab-format-text">Type it in the terminal, or use the Input tab to feed it all at once.</p>
               <pre className="codelab-sample-input">{problem.sampleInput}</pre>
             </>
           )}

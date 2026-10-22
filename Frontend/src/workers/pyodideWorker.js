@@ -3,9 +3,17 @@
 // WebAssembly). Libraries such as numpy, pandas, scikit-learn, scipy,
 // sympy and matplotlib are downloaded on demand from the Pyodide CDN the
 // first time a program imports them, then cached by the browser.
+//
+// Two stdin modes:
+// - batch (test cases): the whole stdin string is given up front.
+// - interactive (the Code Lab terminal): output is streamed to the page as
+//   it is printed, and each read of stdin asks the page for a line, then
+//   blocks on a synchronous request that public/codelab-stdin-sw.js answers
+//   once the student presses Enter.
 
 const PYODIDE_VERSION = '0.26.4';
 const PYODIDE_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
+const STDIN_PREFIX = '/__codelab_stdin__/';
 
 let pyodideReady = null;
 
@@ -40,8 +48,32 @@ const cleanTraceback = (message = '') => {
   return ['Traceback (most recent call last):', ...lines.slice(start)].join('\n').trim();
 };
 
+// Time spent blocked on the student's typing, left out of the run time.
+let inputWaitMs = 0;
+
+// Blocks until the page sends the next typed line; null means end of input.
+const readTerminalLine = (id, runId, seq) => {
+  const waitStart = performance.now();
+  try {
+    return requestTerminalLine(id, runId, seq);
+  } finally {
+    inputWaitMs += performance.now() - waitStart;
+  }
+};
+
+const requestTerminalLine = (id, runId, seq) => {
+  self.postMessage({ id, type: 'input-request' });
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', `${STDIN_PREFIX}${runId}/${seq}`, false);
+  xhr.send();
+  if (xhr.status !== 200 || xhr.getResponseHeader('X-Codelab-Stdin') !== '1') {
+    throw new Error('Terminal input is unavailable in this browser.');
+  }
+  return JSON.parse(xhr.responseText).text;
+};
+
 self.onmessage = async (event) => {
-  const { id, code, stdin = '' } = event.data;
+  const { id, code, stdin = '', interactive = false, runId = '' } = event.data;
   const stdout = [];
   const stderr = [];
 
@@ -57,16 +89,39 @@ self.onmessage = async (event) => {
     });
     const installed = Object.keys(pyodide.loadedPackages).filter((p) => !packagesBefore.has(p));
 
-    let stdinUsed = false;
-    pyodide.setStdin({
-      stdin: () => {
-        if (stdinUsed) return null;
-        stdinUsed = true;
-        return stdin.endsWith('\n') || !stdin ? stdin : `${stdin}\n`;
-      },
-    });
-    pyodide.setStdout({ batched: (text) => stdout.push(text) });
-    pyodide.setStderr({ batched: (text) => stderr.push(text) });
+    if (interactive) {
+      let seq = 0;
+      let ended = false;
+      // Not a tty: with a tty stdin, input() writes its prompt to stderr.
+      pyodide.setStdin({
+        stdin: () => {
+          if (ended) return null;
+          const text = readTerminalLine(id, runId, seq++);
+          if (text === null) ended = true;
+          return text;
+        },
+      });
+      // Raw writes so prompts without a newline (input("n = ")) show at once.
+      const decoder = new TextDecoder();
+      const stream = (type) => (bytes) => {
+        const text = decoder.decode(bytes, { stream: true });
+        if (text) self.postMessage({ id, type, text });
+        return bytes.length;
+      };
+      pyodide.setStdout({ write: stream('stdout'), isatty: true });
+      pyodide.setStderr({ write: stream('stderr'), isatty: true });
+    } else {
+      let stdinUsed = false;
+      pyodide.setStdin({
+        stdin: () => {
+          if (stdinUsed) return null;
+          stdinUsed = true;
+          return stdin.endsWith('\n') || !stdin ? stdin : `${stdin}\n`;
+        },
+      });
+      pyodide.setStdout({ batched: (text) => stdout.push(text) });
+      pyodide.setStderr({ batched: (text) => stderr.push(text) });
+    }
 
     // Fresh globals each run so programs never see the previous run's state.
     const globals = pyodide.globals.get('dict')();
@@ -81,6 +136,7 @@ warnings.filterwarnings("ignore", message=".*non-interactive.*")
 `);
 
     self.postMessage({ id, type: 'started' });
+    inputWaitMs = 0;
     const started = performance.now();
     let error = '';
 
@@ -89,8 +145,10 @@ warnings.filterwarnings("ignore", message=".*non-interactive.*")
     } catch (err) {
       error = cleanTraceback(err?.message || String(err));
     }
+    // Push out anything still sitting in Python's buffers.
+    try { pyodide.runPython('import sys\nsys.stdout.flush()\nsys.stderr.flush()'); } catch { /* ignore */ }
 
-    const time = Math.round(performance.now() - started);
+    const time = Math.round(performance.now() - started - inputWaitMs);
     let images = [];
     try {
       images = pyodide.runPython(COLLECT_FIGURES).toJs();

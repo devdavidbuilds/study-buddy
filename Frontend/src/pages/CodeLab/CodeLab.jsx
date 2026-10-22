@@ -9,7 +9,7 @@ import Toolbar from '../../components/codelab/Toolbar';
 import AIPanel from '../../components/ai/AIPanel';
 import CodeLabHeader from '../../components/layout/CodeLabHeader';
 import { runCode, submitCode, checkCompilerStatus } from '../../services/compilerApi';
-import { runPython, runPythonTestCases } from '../../services/pythonRunner';
+import { runPython, runPythonTestCases, canRunInteractively, stopPython } from '../../services/pythonRunner';
 import {
   codeProblems,
   samplePrograms,
@@ -28,6 +28,31 @@ let nextScratchId = 1;
 
 const pythonRuntimeNote = (installed = []) =>
   `Python ran in your browser (Pyodide).${installed.length ? `\nLibraries downloaded this run: ${installed.join(', ')}` : ''}`;
+
+// The terminal keeps roughly this much text; older output is dropped.
+const TERMINAL_MAX_CHARS = 200000;
+const STOPPED = Symbol('stopped');
+const EMPTY_TERMINAL = { segments: [], status: 'idle', title: 'terminal', images: [] };
+
+// Keeps the newest `limit` characters of a segment list.
+const trimSegments = (segments, limit) => {
+  const kept = [];
+  let room = limit;
+  for (let i = segments.length - 1; i >= 0 && room > 0; i--) {
+    const { kind, text } = segments[i];
+    kept.unshift({ kind, text: text.length > room ? text.slice(-room) : text });
+    room -= text.length;
+  }
+  return kept;
+};
+
+// Whether a program reads stdin (decides if C/C++ input is collected first).
+const INPUT_PATTERNS = {
+  python: /\binput\s*\(|sys\.stdin|stdin\.read/,
+  c: /\b(scanf|getchar|fgets|gets|getline|fgetc|getc)\s*\(/,
+  cpp: /\bcin\s*>>|\bgetline\s*\(|\b(scanf|getchar|fgets|gets)\s*\(/,
+};
+const readsInput = (code, language) => INPUT_PATTERNS[language]?.test(code) ?? false;
 
 export default function CodeLab() {
   const [activeProblemId, setActiveProblemId] = useState(codeProblems[0].id);
@@ -65,8 +90,10 @@ export default function CodeLab() {
   const [executionResult, setExecutionResult] = useState(null);
   const [compileOutput, setCompileOutput] = useState('');
   const [lastError, setLastError] = useState('');
-  const [lastOutput, setLastOutput] = useState('');
-  const [outputImages, setOutputImages] = useState([]);
+  const [terminal, setTerminal] = useState(EMPTY_TERMINAL);
+  const lineResolverRef = useRef(null);
+  const presetLinesRef = useRef([]);
+  const collectedRef = useRef([]);
   const [requestedTab, setRequestedTab] = useState(null);
   const [statusLine, setStatusLine] = useState('');
   const [logs, setLogs] = useState([]);
@@ -136,8 +163,6 @@ export default function CodeLab() {
     setExecutionResult(null);
     setCompileOutput('');
     setLastError('');
-    setLastOutput('');
-    setOutputImages([]);
     setStatusLine('');
     setVerdictBanner(null);
   };
@@ -146,12 +171,14 @@ export default function CodeLab() {
     const item = allItems.find(p => p.id === id);
     setActiveProblemId(id);
     setActiveTabId('main');
+    handleTerminalStop();
     clearRunState();
+    setTerminal(EMPTY_TERMINAL);
     setLogs([]);
     if (item?.kind === 'program') {
       setLanguage(item.language);
       setCustomInput(item.sampleInput || '');
-      showTab(item.sampleInput ? 'Input' : 'Output');
+      showTab('Terminal');
     } else {
       setCustomInput('');
       showTab('Test Cases');
@@ -175,64 +202,203 @@ export default function CodeLab() {
     pushLog(stage);
   }, [pushLog]);
 
-  // One run with the console's custom stdin (used by sample programs and
-  // the Input tab). Python runs in the browser, C/C++ on the server.
-  const runSingle = useCallback(async (code, stdin) => {
+  // ---- Terminal ----
+  // segments are appended as the program prints; consecutive pieces of the
+  // same kind are merged so long outputs stay a handful of DOM nodes.
+  const appendTerminal = useCallback((kind, text) => {
+    if (!text) return;
+    setTerminal(prev => {
+      const segments = prev.segments.slice();
+      const last = segments[segments.length - 1];
+      if (last && last.kind === kind) segments[segments.length - 1] = { kind, text: last.text + text };
+      else segments.push({ kind, text });
+      const size = segments.reduce((n, s) => n + s.text.length, 0);
+      if (size > TERMINAL_MAX_CHARS) {
+        segments.splice(0, segments.length, { kind: 'sys', text: '… earlier output trimmed …\n' }, ...trimSegments(segments, TERMINAL_MAX_CHARS / 2));
+      }
+      return { ...prev, segments };
+    });
+  }, []);
+
+  // Starts a line of system text on a fresh line.
+  const appendSystem = useCallback((text) => {
+    setTerminal(prev => {
+      const lastText = prev.segments[prev.segments.length - 1]?.text || '';
+      const lead = lastText && !lastText.endsWith('\n') ? '\n' : '';
+      return { ...prev, segments: [...prev.segments, { kind: 'sys', text: `${lead}${text}\n` }] };
+    });
+  }, []);
+
+  const setTerminalStatus = (status) => setTerminal(prev => ({ ...prev, status }));
+
+  // Resolves with one typed line ('text\n') or null for end of input. Lines
+  // given up front (the Input tab) are typed for the student first.
+  const readTerminalLine = useCallback(() => {
+    const preset = presetLinesRef.current;
+    if (preset.length) {
+      const line = `${preset.shift()}\n`;
+      appendTerminal('in', line);
+      return Promise.resolve(line);
+    }
+    return new Promise((resolve) => {
+      lineResolverRef.current = resolve;
+      setTerminalStatus('waiting');
+    });
+  }, [appendTerminal]);
+
+  const handleTerminalLine = (text) => {
+    const resolve = lineResolverRef.current;
+    if (!resolve) return;
+    appendTerminal('in', `${text}\n`);
+    if (terminal.status === 'collecting') {
+      collectedRef.current.push(text);
+      return;
+    }
+    lineResolverRef.current = null;
+    setTerminalStatus('running');
+    resolve(`${text}\n`);
+  };
+
+  const handleTerminalEnd = () => {
+    const resolve = lineResolverRef.current;
+    if (!resolve) return;
+    lineResolverRef.current = null;
+    setTerminalStatus('running');
+    resolve(null);
+  };
+
+  const handleTerminalStop = () => {
+    stopPython();
+    if (lineResolverRef.current) {
+      const resolve = lineResolverRef.current;
+      lineResolverRef.current = null;
+      resolve(STOPPED);
+    }
+  };
+
+  // Every line until Ctrl+D, for runs that need all input before starting
+  // (C/C++ run on the server in one go). Resolves null when stopped.
+  const collectAllInput = () => new Promise((resolve) => {
+    collectedRef.current = [];
+    lineResolverRef.current = (value) => resolve(value === STOPPED ? null : collectedRef.current.join('\n'));
+    setTerminalStatus('collecting');
+  });
+
+  const finishTerminal = useCallback((summary, images = []) => {
+    appendSystem(summary);
+    setTerminal(prev => ({ ...prev, status: 'done', images }));
+  }, [appendSystem]);
+
+  // Runs the program in the Terminal tab. Python runs in the browser and
+  // reads input as the student types it. C/C++ run on the server in one
+  // go, so their input is typed first and the program runs on Ctrl+D.
+  const runInTerminal = useCallback(async (code, presetInput = '') => {
+    stopPython();
     setRunning(true);
     clearRunState();
-    showTab('Output');
+    showTab('Terminal');
+    const fileName = `${isProgram ? 'program' : 'solution'}${activeLang?.ext || ''}`;
+    const command = language === 'python' ? `python3 ${fileName}` : `./${fileName.replace(/\.\w+$/, '')}`;
+    presetLinesRef.current = presetInput ? presetInput.replace(/\n$/, '').split('\n') : [];
+    setTerminal({ segments: [{ kind: 'prompt', text: '$ ' }, { kind: 'cmd', text: `${command}\n` }], status: 'starting', title: `${fileName} — terminal`, images: [] });
 
     try {
       if (language === 'python') {
-        const run = await runPython(code, stdin, { onStage: stageFn });
-        setLastOutput(run.stdout || (run.error ? '' : '(no output)'));
-        setOutputImages(run.images || []);
+        const interactive = await canRunInteractively();
+        let stdin = '';
+        if (!interactive && readsInput(code, 'python') && !presetLinesRef.current.length) {
+          appendSystem('This browser cannot pause the program for input, so type all of it first.');
+          stdin = await collectAllInput();
+          if (stdin === null) { finishTerminal('^C  Stopped.'); return; }
+        } else if (!interactive) {
+          stdin = presetLinesRef.current.join('\n');
+          presetLinesRef.current.forEach(line => appendTerminal('in', `${line}\n`));
+        }
+
+        setTerminalStatus('running');
+        const run = await runPython(code, stdin, {
+          onStage: stageFn,
+          ...(interactive && {
+            onOutput: (text, stream) => appendTerminal(stream === 'stderr' ? 'err' : 'out', text),
+            onInputRequest: async (sendLine) => {
+              const line = await readTerminalLine();
+              if (line === STOPPED) return;
+              sendLine(line);
+            },
+          }),
+        });
+
+        // Only non-streamed runs collect stdout; streamed output is already shown.
+        if (run.stdout) appendTerminal('out', `${run.stdout}\n`);
+        if (run.error) appendTerminal('err', `${run.error}\n`);
         setLastError(run.error || '');
         setCompileOutput(pythonRuntimeNote(run.installed));
-        const status = run.timedOut ? 'Time Limit Exceeded' : run.error ? 'Runtime Error' : 'Completed';
+        if (run.installed?.length) pushLog(`Installed: ${run.installed.join(', ')}`);
+
+        const status = run.stopped ? 'Stopped' : run.timedOut ? 'Time Limit Exceeded' : run.error ? 'Runtime Error' : 'Completed';
         setStatusLine(status);
         setExecutionResult({ status, time: run.time, memory: null, passedCount: 0, totalCount: 0 });
-        if (run.installed?.length) pushLog(`Installed: ${run.installed.join(', ')}`);
-        if (run.error) showTab('Error');
+        finishTerminal(
+          run.stopped ? '^C  Stopped.'
+            : run.timedOut ? '[Process killed: time limit exceeded]'
+              : `[Process ${run.error ? 'exited with an error' : 'finished'} in ${run.time} ms]`,
+          run.images || [],
+        );
         return;
       }
 
+      let stdin = presetLinesRef.current.join('\n');
+      if (presetLinesRef.current.length) {
+        presetLinesRef.current.forEach(line => appendTerminal('in', `${line}\n`));
+      } else if (readsInput(code, language)) {
+        appendSystem('C/C++ runs on the server in one go: type all the input first, then press Ctrl+D to run.');
+        stdin = await collectAllInput();
+        if (stdin === null) { finishTerminal('^C  Stopped.'); return; }
+      }
+
+      setTerminalStatus('running');
       stageFn('Compiling and running on the server…');
       const res = await runCode({ code, language, customInput: stdin, onStage: stageFn });
 
       if (res.fallback || res.status === 'Error') {
-        setLastError(res.error || res.message || 'Compiler service unavailable.');
+        const message = res.error || res.message || 'Compiler service unavailable.';
+        setLastError(message);
         setStatusLine('Run failed');
-        showTab('Error');
+        appendTerminal('err', `${message}\n`);
+        finishTerminal('[Run failed]');
         return;
       }
 
       setStatusLine(res.status);
       setCompileOutput(res.compileOutput || 'Compiled successfully.');
       if (res.status === 'Compilation Error') {
-        setLastError(res.compileOutput || res.stderr || 'Compilation failed.');
-        showTab('Error');
+        const message = res.compileOutput || res.stderr || 'Compilation failed.';
+        setLastError(message);
+        appendTerminal('err', `${message.replace(/\n?$/, '\n')}`);
+        finishTerminal('[Compilation failed]');
         return;
       }
 
-      setLastOutput(res.stdout || '(no output)');
+      appendTerminal('out', res.stdout || '');
+      if (res.stderr) appendTerminal('err', res.stderr.replace(/\n?$/, '\n'));
       const failed = res.status !== 'Accepted' && res.status !== 'Completed';
       setLastError(failed ? [res.status, res.stderr].filter(Boolean).join('\n') : res.stderr || '');
       setExecutionResult({ status: res.status, time: res.time, memory: res.memory, passedCount: 0, totalCount: 0 });
-      if (failed) showTab('Error');
+      finishTerminal(failed ? `[${res.status}]` : '[Process finished]');
     } catch (error) {
       setLastError(error.message || 'Execution failed.');
       setStatusLine('Execution failed');
-      showTab('Error');
+      appendTerminal('err', `${error.message || 'Execution failed.'}\n`);
+      finishTerminal('[Run failed]');
     } finally {
+      lineResolverRef.current = null;
       setRunning(false);
     }
-  }, [language, stageFn, pushLog]);
+  }, [language, isProgram, activeLang, stageFn, pushLog, appendTerminal, appendSystem, finishTerminal, readTerminalLine]);
 
   const executeSubset = useCallback(async (subset, { isSubmit = false } = {}) => {
     const code = codeMap[codeKey] ?? getStarterCode(problem, language);
     setLastError('');
-    setOutputImages([]);
 
     if (isSubmit) {
       setSubmitting(true);
@@ -327,7 +493,6 @@ export default function CodeLab() {
         (res.results || []).forEach(r => merged.set(r.id, r));
         return Array.from(merged.values());
       });
-      setLastOutput((res.results || []).map(r => `Case ${r.id} (${r.status}):\n${r.actual}`).join('\n\n'));
       const firstError = (res.results || []).find(r => r.status === 'Runtime Error' || r.status === 'Time Limit Exceeded');
       setLastError(firstError ? `Case ${firstError.id}: ${firstError.actual}` : '');
       setExecutionResult({
@@ -354,7 +519,7 @@ export default function CodeLab() {
 
   const handleRun = () => {
     if (isProgram || testCases.length === 0) {
-      runSingle(currentCode(), customInput);
+      runInTerminal(currentCode());
     } else {
       executeSubset(testCases);
     }
@@ -364,7 +529,7 @@ export default function CodeLab() {
     executeSubset(testCases, { isSubmit: true });
   };
   const handleRunOne = (id) => executeSubset(testCases.filter(tc => tc.id === id));
-  const handleRunCustom = () => runSingle(currentCode(), customInput);
+  const handleRunCustom = () => runInTerminal(currentCode(), customInput);
 
   const handleSave = () => {
     pushLog('Saved solution.');
@@ -532,7 +697,14 @@ export default function CodeLab() {
             customInput={customInput}
             onCustomInputChange={setCustomInput}
             onRunCustom={handleRunCustom}
-            lastOutput={lastOutput}
+            terminalProps={{
+              session: terminal,
+              onRun: () => runInTerminal(currentCode()),
+              onSubmitLine: handleTerminalLine,
+              onEndInput: handleTerminalEnd,
+              onStop: handleTerminalStop,
+              onClear: () => setTerminal(EMPTY_TERMINAL),
+            }}
             lastError={lastError}
             executionResult={executionResult}
             compileOutput={compileOutput}
@@ -541,7 +713,6 @@ export default function CodeLab() {
             running={running || submitting}
             testCaseProps={testCaseHandlers}
             onLoadSubmissionCode={handleLoadSubmissionCode}
-            outputImages={outputImages}
             requestedTab={requestedTab}
           />
         </div>

@@ -3,15 +3,16 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import TestCasePanel from '../testcases/TestCasePanel';
 import OutputSummary from '../output/OutputSummary';
 import SubmissionHistory from '../codelab/SubmissionHistory';
+import Terminal from './Terminal';
 
-const TABS = ['Input', 'Output', 'Error', 'Execution', 'Test Cases', 'History', 'Logs', 'Compilation'];
+const TABS = ['Terminal', 'Input', 'Error', 'Execution', 'Test Cases', 'History', 'Logs', 'Compilation'];
 
 export default function ConsolePanel({
   collapsed, onToggleCollapse,
   customInput, onCustomInputChange, onRunCustom,
-  lastOutput, lastError, executionResult, compileOutput, logs,
+  terminalProps, lastError, executionResult, compileOutput, logs,
   testCaseProps, statusLine, running,
-  onLoadSubmissionCode, outputImages = [], requestedTab,
+  onLoadSubmissionCode, requestedTab,
 }) {
   const [tab, setTab] = useState('Test Cases');
 
@@ -43,7 +44,7 @@ export default function ConsolePanel({
         <div className="codelab-console-body">
           {tab === 'Input' && (
             <div className="codelab-console-pane">
-              <p className="codelab-console-hint">Provide custom stdin for a quick one-off run (separate from saved test cases).</p>
+              <p className="codelab-console-hint">Paste input here to feed it all at once. It is typed into the terminal for you; anything more the program asks for, you type yourself.</p>
               <textarea
                 className="codelab-console-textarea"
                 value={customInput}
@@ -51,29 +52,12 @@ export default function ConsolePanel({
                 placeholder="Type custom input here..."
               />
               <button className="btn btn-primary btn-sm" onClick={onRunCustom} disabled={running}>
-                {running ? 'Running...' : 'Run with this input'}
+                {running ? 'Running...' : 'Run in terminal with this input'}
               </button>
             </div>
           )}
 
-          {tab === 'Output' && (
-            <div className="codelab-console-pane">
-              {running ? (
-                <div className="codelab-skeleton-grid">
-                  <div className="skeleton-line short" />
-                  <div className="skeleton-line" />
-                  <div className="skeleton-line long" />
-                </div>
-              ) : (
-                <>
-                  <pre className="codelab-console-output">{lastOutput || 'Run your code to see output here.'}</pre>
-                  {outputImages.map((src, i) => (
-                    <img key={i} className="codelab-output-image" src={`data:image/png;base64,${src}`} alt={`Plot ${i + 1}`} />
-                  ))}
-                </>
-              )}
-            </div>
-          )}
+          {tab === 'Terminal' && <Terminal {...terminalProps} />}
  
           {tab === 'Error' && (
             <div className="codelab-console-pane">
