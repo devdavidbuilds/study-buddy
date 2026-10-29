@@ -1,192 +1,140 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getMyEnrollments } from '../api/enrollmentApi';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { getNotifications } from '../api/notificationsApi';
+import { getRelativeTime } from '../utils/helpers';
 
-const STORAGE_KEY = 'study_buddy_notifications_v1';
+// Notifications come only from real records (GET /api/notifications):
+// enrollment decisions, graded/returned assignments, feedback replies, new
+// materials and assignments, deadlines and certificates. The list refreshes
+// every minute and whenever the tab regains focus. Which ones the student
+// has read or dismissed is remembered in this browser, per account.
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'notif-enroll-1',
-    title: 'Enrollment Approved',
-    message: 'Your enrollment request for "Data Structures & Algorithms" has been approved! You can now start learning.',
-    type: 'success',
-    category: 'enrollment',
-    time: '15 min ago',
-    timestamp: Date.now() - 15 * 60 * 1000,
-    read: false,
-    link: '/courses',
-  },
-  {
-    id: 'notif-mat-1',
-    title: 'New Lecture Material Uploaded',
-    message: 'Dr. Sarah Mitchell uploaded "Week 4 - Binary Search Trees & Heaps Lecture Notes.pdf" in Data Structures & Algorithms.',
-    type: 'info',
-    category: 'material',
-    time: '1 hour ago',
-    timestamp: Date.now() - 60 * 60 * 1000,
-    read: false,
-    link: '/courses',
-  },
-  {
-    id: 'notif-mat-2',
-    title: 'Lecture Slides Added',
-    message: 'New lecture slides "Neural Networks Architecture Overview.pptx" were added to Machine Learning Fundamentals.',
-    type: 'info',
-    category: 'material',
-    time: '3 hours ago',
-    timestamp: Date.now() - 3 * 60 * 60 * 1000,
-    read: false,
-    link: '/courses',
-  },
-  {
-    id: 'notif-assign-1',
-    title: 'Assignment Due Tomorrow',
-    message: 'Binary Tree Implementation is due tomorrow at 11:59 PM. Don\'t forget to submit your code!',
-    type: 'warning',
-    category: 'assignment',
-    time: '5 hours ago',
-    timestamp: Date.now() - 5 * 60 * 60 * 1000,
-    read: true,
-    link: '/assignments',
-  },
-  {
-    id: 'notif-quiz-1',
-    title: 'Quiz Score Available',
-    message: 'Your score for "SQL Fundamentals" is 92%. Great job!',
-    type: 'success',
-    category: 'quiz',
-    time: '1 day ago',
-    timestamp: Date.now() - 24 * 60 * 60 * 1000,
-    read: true,
-    link: '/progress',
-  },
-];
+const REFRESH_MS = 60 * 1000;
+const STATE_KEY = 'studyBuddyNotificationState';
+const MAX_REMEMBERED = 500;
 
 const NotificationContext = createContext(null);
 
-export function NotificationProvider({ children }) {
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Could not read saved notifications:', e);
-    }
-    return INITIAL_NOTIFICATIONS;
-  });
+// Earlier builds saved sample notifications here; they were never real.
+try { localStorage.removeItem('study_buddy_notifications_v1'); } catch { /* storage unavailable */ }
 
-  // Persist to localStorage whenever notifications change
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
-    } catch (e) {
-      console.warn('Could not persist notifications:', e);
-    }
-  }, [notifications]);
+// The signed-in account's id, read from the stored login token.
+const currentUserId = () => {
+  try {
+    const token = localStorage.getItem('studyBuddyToken');
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.id || null;
+  } catch {
+    return null;
+  }
+};
 
-  // Check for real approved enrollments dynamically
-  useEffect(() => {
-    let isMounted = true;
-    async function checkApprovedEnrollments() {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+const loadState = (userId) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+    const mine = all[userId] || {};
+    return { read: new Set(mine.read || []), dismissed: new Set(mine.dismissed || []) };
+  } catch {
+    return { read: new Set(), dismissed: new Set() };
+  }
+};
 
-        const res = await getMyEnrollments();
-        const enrollments = res?.data?.data || [];
-        const approved = enrollments.filter((e) => e.status === 'approved' && e.course);
-
-        if (!isMounted || approved.length === 0) return;
-
-        setNotifications((prev) => {
-          const newItems = [];
-          for (const item of approved) {
-            const courseName = item.course?.courseName || item.course?.title || 'your course';
-            const courseId = item.course?._id || item.course?.id;
-            const notifId = `enroll-approved-${courseId}`;
-
-            const alreadyExists = prev.some((n) => n.id === notifId);
-            if (!alreadyExists) {
-              newItems.push({
-                id: notifId,
-                title: 'Enrollment Approved',
-                message: `Your enrollment request for "${courseName}" has been approved! You now have full access.`,
-                type: 'success',
-                category: 'enrollment',
-                time: 'Recently',
-                timestamp: item.decidedAt ? new Date(item.decidedAt).getTime() : Date.now(),
-                read: false,
-                link: courseId ? `/courses/${courseId}` : '/courses',
-              });
-            }
-          }
-
-          if (newItems.length > 0) {
-            return [...newItems, ...prev];
-          }
-          return prev;
-        });
-      } catch (_err) {
-        // Non-fatal, use existing notifications
-      }
-    }
-
-    checkApprovedEnrollments();
-    return () => {
-      isMounted = false;
+const saveState = (userId, state) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+    all[userId] = {
+      read: [...state.read].slice(-MAX_REMEMBERED),
+      dismissed: [...state.dismissed].slice(-MAX_REMEMBERED),
     };
-  }, []);
+    localStorage.setItem(STATE_KEY, JSON.stringify(all));
+  } catch {
+    // storage unavailable: read state lasts for this visit only
+  }
+};
+
+const timeLabel = (item) => (item.category === 'deadline' ? 'Due soon' : getRelativeTime(item.timestamp));
+
+export function NotificationProvider({ children }) {
+  const [items, setItems] = useState([]);
+  const [userId, setUserId] = useState(currentUserId);
+  const [state, setState] = useState(() => loadState(currentUserId()));
+  const [loading, setLoading] = useState(false);
+  const [, setTick] = useState(0); // re-renders so "5m ago" labels stay current
+  const inFlight = useRef(false);
+
+  const refresh = useCallback(async () => {
+    const id = currentUserId();
+    if (id !== userId) {
+      setUserId(id);
+      setState(loadState(id));
+      setItems([]);
+    }
+    if (!id || inFlight.current) return;
+    inFlight.current = true;
+    setLoading(true);
+    try {
+      const res = await getNotifications();
+      setItems(res?.data?.data || []);
+    } catch {
+      // Keep the last list; the next refresh tries again.
+    } finally {
+      inFlight.current = false;
+      setLoading(false);
+      setTick((t) => t + 1);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    refresh();
+    const timer = setInterval(refresh, REFRESH_MS);
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [refresh]);
+
+  const update = useCallback((change) => {
+    setState((prev) => {
+      const next = { read: new Set(prev.read), dismissed: new Set(prev.dismissed) };
+      change(next);
+      if (userId) saveState(userId, next);
+      return next;
+    });
+  }, [userId]);
+
+  const notifications = useMemo(
+    () => items
+      .filter((n) => !state.dismissed.has(n.id))
+      .map((n) => ({ ...n, read: state.read.has(n.id), time: timeLabel(n) })),
+    [items, state],
+  );
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = useCallback((id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  }, []);
-
-  const markAllAsRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  }, []);
-
-  const deleteNotification = useCallback((id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
-
-  const clearAll = useCallback(() => {
-    setNotifications([]);
-  }, []);
-
-  const addNotification = useCallback((notif) => {
-    const newItem = {
-      id: notif.id || `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      title: notif.title || 'Notification',
-      message: notif.message || '',
-      type: notif.type || 'info',
-      category: notif.category || 'general',
-      time: 'Just now',
-      timestamp: Date.now(),
-      read: false,
-      link: notif.link || '/workspace',
-      ...notif,
-    };
-    setNotifications((prev) => [newItem, ...prev]);
-  }, []);
+  const markAsRead = useCallback((id) => update((s) => s.read.add(id)), [update]);
+  const markAllAsRead = useCallback(
+    () => update((s) => notifications.forEach((n) => s.read.add(n.id))),
+    [update, notifications],
+  );
+  const deleteNotification = useCallback((id) => update((s) => s.dismissed.add(id)), [update]);
+  const clearAll = useCallback(
+    () => update((s) => notifications.forEach((n) => s.dismissed.add(n.id))),
+    [update, notifications],
+  );
 
   return (
     <NotificationContext.Provider
       value={{
         notifications,
         unreadCount,
+        loading,
+        refresh,
         markAsRead,
         markAllAsRead,
         deleteNotification,
         clearAll,
-        addNotification,
       }}
     >
       {children}

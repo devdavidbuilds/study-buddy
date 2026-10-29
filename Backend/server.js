@@ -30,6 +30,7 @@ const noteRoutes = require("./routes/noteRoutes");
 const facultyStudentRoutes = require("./routes/facultyStudentRoutes");
 const enrollmentRoutes = require("./routes/enrollmentRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 const { startRecommenderKeepWarm } = require("./controllers/recommendationController");
 
 connectDB();
@@ -80,6 +81,7 @@ app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

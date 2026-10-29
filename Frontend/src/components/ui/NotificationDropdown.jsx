@@ -11,6 +11,9 @@ import {
   X,
   ChevronRight,
   Inbox,
+  MessageSquareReply,
+  Award,
+  CalendarClock,
 } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import './NotificationDropdown.css';
@@ -70,6 +73,12 @@ export default function NotificationDropdown({ className = '' }) {
         return <FileText size={16} />;
       case 'assignment':
         return <AlertCircle size={16} />;
+      case 'deadline':
+        return <CalendarClock size={16} />;
+      case 'feedback':
+        return <MessageSquareReply size={16} />;
+      case 'certificate':
+        return <Award size={16} />;
       case 'quiz':
         return <Sparkles size={16} />;
       default:

@@ -77,6 +77,7 @@ Access rules are enforced on the **server**, not only hidden in the interface. F
 | **Code Lab** | In-browser IDE with coding problems, sample programs and an **interactive terminal** (details in §6.4). |
 | **Reading list & feedback** | Each course has a curated reading list (books, papers, documentation). Enrolled students rate the course, write feedback and mark others' feedback as helpful. |
 | **Related courses** | ML-based recommendations on every course page (§7.1). |
+| **Notifications** | Bell menu and Notifications page built only from real events: enrollment decisions, graded or returned assignments, faculty replies to feedback, new lecture materials and assignments, deadlines within 3 days and new certificates. Refreshes every minute and when the tab regains focus. |
 | **Themes** | "Sakura Day" (light) and "Sakura Midnight" (dark), or follow the device setting (§6.6). |
 
 ### 3.2 Faculty features
@@ -308,6 +309,7 @@ All endpoints are under `/api`. Every route except login, sign-up, the public co
 | `/compiler` | run and submit code (C / C++ on the server) |
 | `/recommendations` | related courses (calls the ML service), read-only catalogue export for training |
 | `/activity` | recent student activity |
+| `/notifications` | the student's notifications, built from real records of the last 30 days |
 
 ---
 

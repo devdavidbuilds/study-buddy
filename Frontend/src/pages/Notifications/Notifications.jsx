@@ -11,6 +11,9 @@ import {
   Trash2,
   ExternalLink,
   Inbox,
+  MessageSquareReply,
+  Award,
+  CalendarClock,
 } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import './Notifications.css';
@@ -19,9 +22,23 @@ const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'unread', label: 'Unread' },
   { key: 'enrollment', label: 'Enrollments' },
-  { key: 'material', label: 'Lecture Materials' },
   { key: 'assignment', label: 'Assignments' },
+  { key: 'material', label: 'Lecture Materials' },
+  { key: 'feedback', label: 'Feedback' },
+  { key: 'certificate', label: 'Certificates' },
 ];
+
+// Deadline reminders are listed under Assignments.
+const inFilter = (item, key) => item.category === key || (key === 'assignment' && item.category === 'deadline');
+
+const LINK_LABELS = {
+  enrollment: 'Open course',
+  material: 'Open course',
+  feedback: 'Open course',
+  assignment: 'View assignments',
+  deadline: 'View assignments',
+  certificate: 'View certificates',
+};
 
 export default function Notifications() {
   const [activeFilter, setActiveFilter] = useState('all');
@@ -36,10 +53,8 @@ export default function Notifications() {
 
   const filtered = notifications.filter((item) => {
     if (activeFilter === 'unread') return !item.read;
-    if (activeFilter === 'enrollment') return item.category === 'enrollment';
-    if (activeFilter === 'material') return item.category === 'material';
-    if (activeFilter === 'assignment') return item.category === 'assignment';
-    return true;
+    if (activeFilter === 'all') return true;
+    return inFilter(item, activeFilter);
   });
 
   const getCategoryIcon = (category) => {
@@ -50,6 +65,12 @@ export default function Notifications() {
         return <FileText size={20} />;
       case 'assignment':
         return <AlertCircle size={20} />;
+      case 'deadline':
+        return <CalendarClock size={20} />;
+      case 'feedback':
+        return <MessageSquareReply size={20} />;
+      case 'certificate':
+        return <Award size={20} />;
       case 'quiz':
         return <Sparkles size={20} />;
       default:
@@ -100,7 +121,7 @@ export default function Notifications() {
           let count = 0;
           if (f.key === 'all') count = notifications.length;
           else if (f.key === 'unread') count = unreadCount;
-          else count = notifications.filter((n) => n.category === f.key).length;
+          else count = notifications.filter((n) => inFilter(n, f.key)).length;
 
           return (
             <button
@@ -122,8 +143,8 @@ export default function Notifications() {
           <div className="notif-page-empty-icon">
             <Inbox size={28} />
           </div>
-          <h3>No notifications in this category</h3>
-          <p>You're all caught up with your updates and alerts! 🌸</p>
+          <h3>{notifications.length === 0 ? 'No notifications yet' : 'No notifications in this category'}</h3>
+          <p>Enrollment decisions, grades, feedback replies, new materials, deadlines and certificates will appear here. 🌸</p>
         </div>
       ) : (
         <div className="notif-cards-list">
@@ -177,13 +198,7 @@ export default function Notifications() {
                       className="notif-card-btn"
                       onClick={() => markAsRead(item.id)}
                     >
-                      <span>
-                        {item.category === 'enrollment' || item.category === 'material'
-                          ? 'View Courses'
-                          : item.category === 'assignment'
-                          ? 'View Assignment'
-                          : 'View Details'}
-                      </span>
+                      <span>{LINK_LABELS[item.category] || 'View details'}</span>
                       <ExternalLink size={12} />
                     </Link>
                   )}

@@ -229,6 +229,21 @@
   color: #8c68c2;
 }
 
+.notif-icon-box.deadline {
+  background: rgba(226, 104, 94, 0.15);
+  color: #c9483d;
+}
+
+.notif-icon-box.feedback {
+  background: rgba(231, 84, 128, 0.14);
+  color: #d6416f;
+}
+
+.notif-icon-box.certificate {
+  background: rgba(240, 190, 60, 0.2);
+  color: #b8860b;
+}
+
 .notif-icon-box.general {
   background: rgba(46, 46, 46, 0.06);
   color: var(--text-secondary);
