@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { LogOut } from 'lucide-react';
 import GlassCard from '../../components/ui/GlassCard';
 import ProgressBar from '../../components/ui/ProgressBar';
 import ProgressRing from '../../components/ui/ProgressRing';
@@ -10,6 +11,7 @@ import useLearningSummary from '../../hooks/useLearningSummary';
 import { getStudySessions } from '../../api/plannerApi';
 import { getNotes } from '../../api/notesApi';
 import { getMyActivity } from '../../api/activityApi';
+import { logout } from '../../api/authApi';
 import { getGreeting, formatDate, getDaysUntil, getPriorityColor, getRelativeTime } from '../../utils/helpers';
 import './Workspace.css';
 
@@ -96,6 +98,11 @@ export default function Workspace() {
     navigate(next ? `/courses/${course._id}/learn/${next.moduleId}/${next.lessonId}` : `/courses/${course._id}`);
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   if (loading) return <PageState title="Loading workspace" message="Preparing your latest study overview…" />;
   if (error) return <PageState type="error" title="Unable to load workspace" message={error} onRetry={refresh} />;
 
@@ -106,7 +113,19 @@ export default function Workspace() {
           <h1>{getGreeting()}, {firstName} 👋</h1>
           <p>{formatDate(new Date())} • Level {summary.level} • {summary.xp.toLocaleString()} XP</p>
         </div>
-        <div className="streak-badge">🔥 {summary.streak} Day Streak</div>
+        <div className="workspace-greeting-actions">
+          <div className="streak-badge">🔥 {summary.streak} Day Streak</div>
+          <button
+            type="button"
+            className="workspace-signout-btn"
+            onClick={handleLogout}
+            title="Sign Out of Study Buddy"
+            aria-label="Sign Out"
+          >
+            <LogOut size={15} />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Continue Learning */}

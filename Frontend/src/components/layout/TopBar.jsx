@@ -1,15 +1,27 @@
-import { Link } from 'react-router-dom';
-import { Bell, Command, Menu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Command, Menu, LogOut } from 'lucide-react';
 import SearchBar from '../ui/SearchBar';
 import ThemeToggle from '../ui/ThemeToggle';
+import NotificationDropdown from '../ui/NotificationDropdown';
+import { logout } from '../../api/authApi';
 
 export default function TopBar({ onCommandOpen, onMobileMenuToggle, pageTitle }) {
-  const unread = 0;
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <button className="topbar-icon-btn mobile-menu-btn" onClick={onMobileMenuToggle}>
+        <button
+          type="button"
+          className="topbar-icon-btn mobile-menu-btn"
+          onClick={onMobileMenuToggle}
+          aria-label="Toggle navigation menu"
+        >
           <Menu size={20} />
         </button>
         <div className="topbar-breadcrumb">
@@ -30,13 +42,25 @@ export default function TopBar({ onCommandOpen, onMobileMenuToggle, pageTitle })
 
       <div className="topbar-right">
         <ThemeToggle />
-        <button className="topbar-icon-btn" onClick={onCommandOpen} title="Command Palette">
+        <button
+          type="button"
+          className="topbar-icon-btn"
+          onClick={onCommandOpen}
+          title="Command Palette (⌘K)"
+          aria-label="Command Palette"
+        >
           <Command size={18} />
         </button>
-        <Link to="/notifications" className="topbar-icon-btn">
-          <Bell size={18} />
-          {unread > 0 && <span className="notification-dot" />}
-        </Link>
+        <NotificationDropdown />
+        <button
+          type="button"
+          className="topbar-icon-btn"
+          onClick={handleLogout}
+          title="Sign Out"
+          aria-label="Sign Out"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
     </header>
   );

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 import Landing from './pages/Landing/Landing';
 import Login from './pages/Login/Login';
@@ -19,6 +20,7 @@ import Progress from './pages/Progress/Progress';
 import Settings from './pages/Settings/Settings';
 import Profile from './pages/Profile/Profile';
 import CodeLab from './pages/CodeLab/CodeLab';
+import Notifications from './pages/Notifications/Notifications';
 import FacultyDashboard from './pages/Faculty/FacultyDashboard';
 
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -26,96 +28,103 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Pages */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+      <NotificationProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Pages */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
 
-          {/* Protected Pages */}
-          <Route element={<ProtectedRoute />}>
-            {/* Faculty Dashboard (own layout, no sidebar) */}
-            <Route
-              path="/faculty"
-              element={<FacultyDashboard />}
-            />
-
-            {/* Student Pages (with AppLayout sidebar) */}
-            <Route element={<AppLayout />}>
+            {/* Protected Pages */}
+            <Route element={<ProtectedRoute />}>
+              {/* Faculty Dashboard (own layout, no sidebar) */}
               <Route
-                path="/workspace"
-                element={<Workspace />}
+                path="/faculty"
+                element={<FacultyDashboard />}
               />
 
-              <Route
-                path="/courses"
-                element={<Courses />}
-              />
+              {/* Student Pages (with AppLayout sidebar) */}
+              <Route element={<AppLayout />}>
+                <Route
+                  path="/workspace"
+                  element={<Workspace />}
+                />
 
-              <Route
-                path="/courses/:id"
-                element={<CourseDetail />}
-              />
+                <Route
+                  path="/courses"
+                  element={<Courses />}
+                />
 
-              <Route
-                path="/courses/:id/learn"
-                element={<CourseLearn />}
-              />
+                <Route
+                  path="/courses/:id"
+                  element={<CourseDetail />}
+                />
 
-              <Route
-                path="/courses/:id/learn/:moduleId/:lessonId"
-                element={<CourseLearn />}
-              />
+                <Route
+                  path="/courses/:id/learn"
+                  element={<CourseLearn />}
+                />
 
-              <Route
-                path="/planner"
-                element={<Planner />}
-              />
+                <Route
+                  path="/courses/:id/learn/:moduleId/:lessonId"
+                  element={<CourseLearn />}
+                />
 
-              <Route
-                path="/assignments"
-                element={<Assignments />}
-              />
+                <Route
+                  path="/planner"
+                  element={<Planner />}
+                />
 
-              <Route
-                path="/ai-tutor"
-                element={<AITutor />}
-              />
+                <Route
+                  path="/assignments"
+                  element={<Assignments />}
+                />
 
-              <Route
-                path="/notes"
-                element={<Notes />}
-              />
+                <Route
+                  path="/ai-tutor"
+                  element={<AITutor />}
+                />
 
-              <Route
-                path="/achievements"
-                element={<Achievements />}
-              />
+                <Route
+                  path="/notes"
+                  element={<Notes />}
+                />
 
-              <Route
-                path="/progress"
-                element={<Progress />}
-              />
+                <Route
+                  path="/achievements"
+                  element={<Achievements />}
+                />
 
-              <Route
-                path="/settings"
-                element={<Settings />}
-              />
+                <Route
+                  path="/progress"
+                  element={<Progress />}
+                />
 
-              <Route
-                path="/profile"
-                element={<Profile />}
-              />
+                <Route
+                  path="/notifications"
+                  element={<Notifications />}
+                />
 
-              <Route
-                path="/code-lab"
-                element={<CodeLab />}
-              />
+                <Route
+                  path="/settings"
+                  element={<Settings />}
+                />
+
+                <Route
+                  path="/profile"
+                  element={<Profile />}
+                />
+
+                <Route
+                  path="/code-lab"
+                  element={<CodeLab />}
+                />
+              </Route>
             </Route>
-          </Route>
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

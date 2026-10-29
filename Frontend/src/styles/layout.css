@@ -558,3 +558,25 @@
 [data-theme="dark"] .petal {
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.15));
 }
+
+
+/* Sidebar sign out */
+.sidebar-logout-btn {
+  margin-top: var(--space-2);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  width: 100%;
+}
+
+.sidebar-logout-btn:hover {
+  color: var(--color-danger, #E2685E);
+  background: rgba(226, 104, 94, 0.08);
+}
+
+[data-theme="dark"] .sidebar-logout-btn:hover {
+  background: rgba(226, 104, 94, 0.15);
+  color: #ff7669;
+}

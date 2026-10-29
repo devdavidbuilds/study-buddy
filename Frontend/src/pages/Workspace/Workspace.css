@@ -12,11 +12,50 @@
 }
 .workspace-greeting h1 { font-size: var(--font-size-3xl); font-weight: var(--font-weight-bold); margin-bottom: var(--space-1); }
 .workspace-greeting p { color: var(--text-secondary); font-size: var(--font-size-sm); }
+
+.workspace-greeting-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 .workspace-greeting .streak-badge {
   display: flex; align-items: center; gap: var(--space-2);
   background: var(--color-warning-muted); color: var(--color-warning);
   padding: var(--space-2) var(--space-4); border-radius: var(--radius-full);
   font-weight: var(--font-weight-semibold); font-size: var(--font-size-sm);
+}
+
+.workspace-signout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.workspace-signout-btn:hover {
+  color: var(--color-danger, #E2685E);
+  background: rgba(226, 104, 94, 0.08);
+  border-color: rgba(226, 104, 94, 0.3);
+}
+
+[data-theme="dark"] .workspace-signout-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .workspace-signout-btn:hover {
+  background: rgba(226, 104, 94, 0.15);
+  border-color: rgba(226, 104, 94, 0.4);
 }
 
 .workspace-grid {

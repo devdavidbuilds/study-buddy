@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Search, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { logout } from '../../api/authApi';
 
 const commands = [
   { group: 'Navigation', items: [
@@ -13,12 +14,14 @@ const commands = [
     { label: 'Go to Notes', action: '/notes', icon: '📒' },
     { label: 'Go to Achievements', action: '/achievements', icon: '🏆' },
     { label: 'Go to Progress', action: '/progress', icon: '📈' },
+    { label: 'Go to Notifications', action: '/notifications', icon: '🔔' },
     { label: 'Go to Profile', action: '/profile', icon: '👤' },
     { label: 'Go to Settings', action: '/settings', icon: '⚙️' },
   ]},
   { group: 'Actions', items: [
     { label: 'Create New Note', action: '/notes', icon: '📒' },
     { label: 'Ask AI Tutor', action: '/ai-tutor', icon: '✨' },
+    { label: 'Sign Out', action: 'logout', icon: '🚪' },
   ]},
 ];
 
@@ -37,6 +40,12 @@ export default function CommandPalette({ isOpen, onClose }) {
   const allItems = filtered.flatMap(g => g.items);
 
   const handleSelect = useCallback((item) => {
+    if (item.action === 'logout') {
+      logout();
+      onClose();
+      navigate('/login');
+      return;
+    }
     if (item.action.startsWith('/')) navigate(item.action);
     onClose();
     setQuery('');

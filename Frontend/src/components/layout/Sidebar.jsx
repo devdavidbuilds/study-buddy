@@ -1,10 +1,11 @@
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, CalendarDays, ClipboardList, Sparkles, NotebookPen,
-  Trophy, TrendingUp, Settings, ChevronLeft, ChevronRight, Code2,
+  Trophy, TrendingUp, Settings, ChevronLeft, ChevronRight, Code2, LogOut,
 } from 'lucide-react';
 import useProfile from '../../hooks/useProfile';
 import { generateInitials } from '../../utils/helpers';
+import { logout } from '../../api/authApi';
 
 const mainNav = [
   { to: '/workspace', icon: Home, label: 'Home' },
@@ -23,9 +24,16 @@ const otherNav = [
 ];
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
+  const navigate = useNavigate();
   const { profile } = useProfile();
   const userName = profile?.name || profile?.fullName || 'Study Buddy';
   const userSchool = profile?.university || profile?.school || 'Learning Community';
+
+  const handleLogout = () => {
+    logout();
+    onMobileClose?.();
+    navigate('/login');
+  };
 
   return (
     <>
@@ -77,6 +85,17 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               <p>{userSchool}</p>
             </div>
           </Link>
+
+          <button
+            type="button"
+            className="nav-item sidebar-logout-btn"
+            onClick={handleLogout}
+            title="Sign Out"
+            aria-label="Sign Out"
+          >
+            <LogOut size={18} />
+            <span>Sign Out</span>
+          </button>
         </div>
 
         <button className="sidebar-toggle" onClick={onToggle}>
