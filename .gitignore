@@ -6,3 +6,6 @@ dist/
 Backend/tmp/
 Backend/uploads/
 *.log
+package-lock.json
+package-lock.conflict-backup.json
+recovery-backup/
