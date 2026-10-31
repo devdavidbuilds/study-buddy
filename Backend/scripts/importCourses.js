@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 
 const Course = require("../models/Course");
 const User = require("../models/User");
+const { determineDomain } = require("../utils/domainHelper");
 
 const departmentOptions = ["CSE", "IT", "ECE", "EEE", "MECH", "CIVIL"];
 const colorPalette = ["#E75480", "#4F46E5", "#10B981", "#F59E0B", "#8B5CF6", "#14B8A6"];
@@ -395,6 +396,7 @@ const importCourses = async () => {
         description: sanitizeDescription(title, subject, row.url),
         thumbnail: "📘",
         category: subject || "Business",
+        domain: determineDomain(subject || "Business", department, safeTitle),
         level,
         duration: toDurationString(row.content_duration),
         color: colorPalette[(courseId + index) % colorPalette.length],

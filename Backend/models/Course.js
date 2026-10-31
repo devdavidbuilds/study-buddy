@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { determineDomain } = require("../utils/domainHelper");
 
 // ==============================
 // Structured lesson content (written by the course content pipeline —
@@ -196,6 +197,14 @@ const courseSchema = new mongoose.Schema(
       default: "Programming",
     },
 
+    domain: {
+      type: String,
+      trim: true,
+      default: function () {
+        return determineDomain(this.category, this.department, this.courseName);
+      },
+    },
+
     level: {
       type: String,
       enum: ["Beginner", "Intermediate", "Advanced"],
@@ -312,11 +321,22 @@ const courseSchema = new mongoose.Schema(
   }
 );
 
+// Automatic domain resolution before saving/validating
+courseSchema.pre("validate", function (next) {
+  if (!this.domain) {
+    this.domain = determineDomain(this.category, this.department, this.courseName);
+  }
+  next();
+});
+
 // The catalog list sorts by these fields (courseController.getAllCourses).
 // Without an index MongoDB sorts full course documents in memory and fails
 // past its 32 MB limit on later pages.
 courseSchema.index({ createdAt: -1 });
 courseSchema.index({ rating: -1, createdAt: -1 });
 courseSchema.index({ students: -1, createdAt: -1 });
+courseSchema.index({ domain: 1, courseName: 1 });
+courseSchema.index({ domain: 1, rating: -1 });
+courseSchema.index({ category: 1, courseName: 1 });
 
 module.exports = mongoose.model("Course", courseSchema);

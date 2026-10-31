@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   createCourse,
   getAllCourses,
+  getCourseDomains,
   getMyFacultyCourses,
   getCourseById,
   updateCourse,
@@ -22,6 +23,9 @@ const validateObjectId = require("../middleware/validateObjectId");
 
 // Get all courses
 router.get("/", getAllCourses);
+
+// Get domains and course counts for domain-based filtering
+router.get("/domains", getCourseDomains);
 
 // Get faculty's own courses (Faculty / Admin)
 router.get(

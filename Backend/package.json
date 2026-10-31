@@ -15,6 +15,7 @@
     "content:rollback": "node scripts/rollbackCourseContent.js",
     "catalog:audit": "node scripts/auditCatalog.js",
     "catalog:cleanup": "node scripts/cleanupCatalog.js",
+    "domains:sync": "node scripts/updateCourseDomains.js",
     "ai:check": "node scripts/checkAiModel.js"
   },
   "keywords": ["study-buddy", "express", "mongodb", "nodejs"],

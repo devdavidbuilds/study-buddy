@@ -3,6 +3,9 @@ import API from './api';
 export const getCourses = (params = {}) =>
   API.get('/courses', { params });
 
+export const getCourseDomains = () =>
+  API.get('/courses/domains');
+
 export const getCourse = (id) => API.get(`/courses/${id}`);
 
 export const getMyFacultyCourses = () => API.get('/courses/faculty/my-courses');

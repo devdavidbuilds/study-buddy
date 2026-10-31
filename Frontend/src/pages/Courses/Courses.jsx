@@ -15,7 +15,7 @@ import GlassCard from '../../components/ui/GlassCard';
 import ProgressRing from '../../components/ui/ProgressRing';
 import SearchBar from '../../components/ui/SearchBar';
 import PageState from '../../components/ui/PageState';
-import { getCourses } from '../../api/courseApi';
+import { getCourses, getCourseDomains } from '../../api/courseApi';
 import { getLevelColor } from '../../utils/helpers';
 import useLearningSummary from '../../hooks/useLearningSummary';
 import { getMyEnrollments } from '../../api/enrollmentApi';
@@ -29,17 +29,22 @@ const levels = [
 
 const sortOptions = [
   { id: 'recommended', label: 'Recommended' },
-  { id: 'progress', label: 'My Progress' },
+  { id: 'domain', label: 'Domain (A–Z)' },
+  { id: 'domain_desc', label: 'Domain (Z–A)' },
   { id: 'rating', label: 'Highest Rated' },
   { id: 'students', label: 'Most Popular' },
+  { id: 'progress', label: 'My Progress' },
 ];
 
-const categories = [
-  'All',
-  'Programming',
-  'Data Science',
-  'Design',
-  'Productivity',
+const defaultDomains = [
+  { id: 'All', label: 'All Domains', icon: '🌟' },
+  { id: 'Web Development', label: 'Web Development', icon: '🌐' },
+  { id: 'Programming & CS', label: 'Programming & CS', icon: '💻' },
+  { id: 'Data Science & AI', label: 'Data Science & AI', icon: '🤖' },
+  { id: 'Business & Finance', label: 'Business & Finance', icon: '📈' },
+  { id: 'Design & Creative', label: 'Design & Creative', icon: '🎨' },
+  { id: 'Music & Audio', label: 'Music & Audio', icon: '🎵' },
+  { id: 'Engineering', label: 'Engineering', icon: '⚙️' },
 ];
 
 /*
@@ -123,8 +128,14 @@ const normalizeCourse = (course) => {
             )?.title
         : null),
 
+    domain:
+      course?.domain ||
+      course?.category ||
+      'General Studies',
+
     category:
       course?.category ||
+      course?.domain ||
       course?.subject ||
       'Programming',
 
@@ -161,11 +172,39 @@ export default function Courses() {
   const navigate = useNavigate();
 
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('All');
+  const [selectedDomain, setSelectedDomain] = useState('All');
   const [level, setLevel] = useState('All Levels');
   const [sort, setSort] = useState('recommended');
+  const [domainList, setDomainList] = useState(defaultDomains);
 
   const [courses, setCourses] = useState([]);
+
+  // Fetch live domain counts from backend database aggregation
+  useEffect(() => {
+    let active = true;
+    getCourseDomains()
+      .then((res) => {
+        if (!active) return;
+        const apiDomains = res?.data?.data || [];
+        if (Array.isArray(apiDomains) && apiDomains.length > 0) {
+          const countMap = new Map(
+            apiDomains.map((d) => [d._id || d.name, d.count])
+          );
+          setDomainList((prev) =>
+            prev.map((dom) => ({
+              ...dom,
+              count: dom.id === 'All' ? undefined : countMap.get(dom.id) || 0,
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load domain counts:', err?.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // The student's own progress per course (GET /api/progress/summary).
   // Course documents don't carry per-student progress, so it is merged in
@@ -232,7 +271,8 @@ export default function Courses() {
         page: nextPage,
         limit: pageSize,
         search: query,
-        category,
+        domain: selectedDomain !== 'All' ? selectedDomain : undefined,
+        category: selectedDomain !== 'All' ? selectedDomain : undefined,
         level,
         sort,
       });
@@ -280,7 +320,7 @@ export default function Courses() {
 
   useEffect(() => {
     loadCourses(1);
-  }, [query, category, level, sort]);
+  }, [query, selectedDomain, level, sort]);
 
   const toggleWishlist = (e, id) => {
     e.stopPropagation();
@@ -325,7 +365,7 @@ export default function Courses() {
   };
 
   /*
-   * Filtering + sorting.
+   * Filtering + sorting (client-side fallback & fast-path).
    */
   const filtered = useMemo(() => {
     let list = courses.map(withProgress).filter((course) => {
@@ -335,6 +375,10 @@ export default function Courses() {
 
       const instructor = String(
         course.instructor || ''
+      ).toLowerCase();
+
+      const courseDomain = String(
+        course.domain || ''
       ).toLowerCase();
 
       const courseCategory = String(
@@ -347,87 +391,36 @@ export default function Courses() {
       const matchesQuery =
         title.includes(searchText) ||
         instructor.includes(searchText) ||
+        courseDomain.includes(searchText) ||
         courseCategory.includes(searchText);
 
       /*
-       * The imported Udemy dataset contains
-       * subjects such as "Web Development",
-       * "Business Finance", etc.
-       *
-       * Keep "All" unrestricted and provide
-       * useful broad category matching.
+       * Domain matching
        */
-      let matchesCategory = true;
+      let matchesDomain = true;
 
-      if (category !== 'All') {
-        const categoryText =
-          courseCategory;
+      if (selectedDomain !== 'All') {
+        const sDom = selectedDomain.toLowerCase();
+        const combined = `${courseDomain} ${courseCategory} ${title}`.toLowerCase();
 
-        if (category === 'Programming') {
-          matchesCategory =
-            categoryText.includes(
-              'program'
-            ) ||
-            categoryText.includes(
-              'development'
-            ) ||
-            categoryText.includes(
-              'software'
-            ) ||
-            categoryText.includes(
-              'web'
-            ) ||
-            categoryText.includes(
-              'code'
-            ) ||
-            categoryText.includes(
-              'computer'
-            );
-        } else if (
-          category === 'Data Science'
-        ) {
-          matchesCategory =
-            categoryText.includes(
-              'data'
-            ) ||
-            categoryText.includes(
-              'machine'
-            ) ||
-            categoryText.includes(
-              'statistics'
-            ) ||
-            categoryText.includes(
-              'analytics'
-            );
-        } else if (
-          category === 'Design'
-        ) {
-          matchesCategory =
-            categoryText.includes(
-              'design'
-            ) ||
-            categoryText.includes(
-              'graphic'
-            ) ||
-            categoryText.includes(
-              'ui'
-            ) ||
-            categoryText.includes(
-              'ux'
-            );
-        } else if (
-          category === 'Productivity'
-        ) {
-          matchesCategory =
-            categoryText.includes(
-              'productivity'
-            ) ||
-            categoryText.includes(
-              'office'
-            ) ||
-            categoryText.includes(
-              'business'
-            );
+        if (courseDomain.includes(sDom) || courseCategory.includes(sDom)) {
+          matchesDomain = true;
+        } else if (selectedDomain === 'Web Development') {
+          matchesDomain = /web|html|css|javascript|react|node|vue|angular|frontend|backend/i.test(combined);
+        } else if (selectedDomain === 'Programming & CS') {
+          matchesDomain = /program|software|algorithm|c\+\+|java|python|code|computer/i.test(combined);
+        } else if (selectedDomain === 'Data Science & AI') {
+          matchesDomain = /data|machine|intelligence|ai|analytics|statistics|deep learning/i.test(combined);
+        } else if (selectedDomain === 'Business & Finance') {
+          matchesDomain = /business|finance|accounting|invest|trading|stock|marketing/i.test(combined);
+        } else if (selectedDomain === 'Design & Creative') {
+          matchesDomain = /design|graphic|photoshop|ui|ux|illustration|animation/i.test(combined);
+        } else if (selectedDomain === 'Music & Audio') {
+          matchesDomain = /music|audio|sound|piano|guitar|vocal/i.test(combined);
+        } else if (selectedDomain === 'Engineering') {
+          matchesDomain = /engineer|mechanic|civil|electric|circuits|robot/i.test(combined);
+        } else {
+          matchesDomain = courseDomain.includes(sDom) || courseCategory.includes(sDom);
         }
       }
 
@@ -437,10 +430,26 @@ export default function Courses() {
 
       return (
         matchesQuery &&
-        matchesCategory &&
+        matchesDomain &&
         matchesLevel
       );
     });
+
+    if (sort === 'domain') {
+      list = [...list].sort((a, b) =>
+        String(a.domain || a.category || '').localeCompare(
+          String(b.domain || b.category || '')
+        )
+      );
+    }
+
+    if (sort === 'domain_desc') {
+      list = [...list].sort((a, b) =>
+        String(b.domain || b.category || '').localeCompare(
+          String(a.domain || a.category || '')
+        )
+      );
+    }
 
     if (sort === 'progress') {
       list = [...list].sort(
@@ -465,10 +474,10 @@ export default function Courses() {
 
     return list;
   }, [
-    category,
     courses,
     level,
     query,
+    selectedDomain,
     sort,
     withProgress,
   ]);
@@ -499,49 +508,44 @@ export default function Courses() {
         type="error"
         title="Unable to load courses"
         message={error}
-        onRetry={loadCourses}
-      />
-    );
-  }
-
-  if (!courses.length) {
-    return (
-      <PageState
-        type="empty"
-        title="No courses yet"
-        message="Your course catalog is empty right now."
+        actionLabel="Retry"
+        onAction={() => loadCourses(1)}
       />
     );
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="courses-page page-container animate-fade-in">
 
       {/* =========================
-          PAGE HEADER
+          HERO BANNER
       ========================== */}
 
-      <div className="page-header">
+      <div className="courses-hero">
 
-        <div>
+        <div className="courses-hero-text">
+
+          <span className="badge badge-primary">
+            Course Catalog
+          </span>
+
           <h1>
-            Course Marketplace
+            Discover, Learn, Excel
           </h1>
 
           <p>
-            {totalCourses.toLocaleString()}{' '}
-            courses across multiple tracks
-            • pick up where you left off
+            Explore expert-led courses across technology, business, design, and science with practical projects and verified certificates.
           </p>
+
         </div>
 
         <div className="courses-hero-stats">
 
           <div className="courses-hero-stat">
             <strong>
-              {totalCourses.toLocaleString()}
+              {totalCourses || courses.length}
             </strong>
-            <span>Courses</span>
+            <span>Available</span>
           </div>
 
           <div className="courses-hero-stat">
@@ -635,7 +639,7 @@ export default function Courses() {
       <div className="courses-toolbar">
 
         <SearchBar
-          placeholder="Search courses or instructors..."
+          placeholder="Search courses, instructors, or domains..."
           value={query}
           onChange={setQuery}
         />
@@ -646,6 +650,7 @@ export default function Courses() {
           onChange={(e) =>
             setSort(e.target.value)
           }
+          aria-label="Sort courses"
         >
           {sortOptions.map((option) => (
             <option
@@ -665,26 +670,47 @@ export default function Courses() {
 
       <div className="filter-row">
 
+        {/* Domain Filter Chips */}
         <div className="category-chips">
 
-          {categories.map((cat) => (
+          {domainList.map((dom) => (
             <span
-              key={cat}
+              key={dom.id}
               className={`chip ${
-                category === cat
+                selectedDomain === dom.id
                   ? 'active'
                   : ''
               }`}
               onClick={() =>
-                setCategory(cat)
+                setSelectedDomain(dom.id)
               }
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  setSelectedDomain(dom.id);
+                }
+              }}
             >
-              {cat}
+              <span aria-hidden="true">{dom.icon}</span>
+              <span>{dom.label}</span>
+              {typeof dom.count === 'number' && dom.count > 0 && (
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    opacity: 0.75,
+                    marginLeft: '2px',
+                  }}
+                >
+                  ({dom.count})
+                </span>
+              )}
             </span>
           ))}
 
         </div>
 
+        {/* Level Filter Chips */}
         <div className="category-chips">
 
           {levels.map((item) => (
@@ -698,6 +724,13 @@ export default function Courses() {
               onClick={() =>
                 setLevel(item)
               }
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  setLevel(item);
+                }
+              }}
             >
               {item}
             </span>
@@ -708,41 +741,21 @@ export default function Courses() {
       </div>
 
       {/* =========================
-          RESULT COUNT
-      ========================== */}
-
-      <div
-        style={{
-          marginBottom:
-            'var(--space-4)',
-          color:
-            'var(--text-tertiary)',
-          fontSize:
-            'var(--font-size-sm)',
-        }}
-      >
-        Showing{' '}
-        {filtered.length.toLocaleString()}{' '}
-        of{' '}
-        {totalCourses.toLocaleString()}{' '}
-        matching courses
-      </div>
-
-      {/* =========================
-          COURSE GRID
+          COURSES GRID
       ========================== */}
 
       <div className="courses-grid">
 
         {visibleCourses.map(
           (course, index) => {
-
             const courseId =
               course._id ||
               course.id;
 
             const isWishlisted =
-              wishlist.has(courseId);
+              wishlist.has(
+                courseId
+              );
 
             return (
               <GlassCard
@@ -837,7 +850,7 @@ export default function Courses() {
                 <div className="course-card-body">
 
                   <span className="course-card-category">
-                    {course.category}
+                    {course.domain || course.category}
                   </span>
 
                   <h3 className="line-clamp-2">
@@ -898,55 +911,78 @@ export default function Courses() {
                   </div>
 
                   {/* Skills */}
-                  <div className="course-card-skills">
+                  {course.skills.length >
+                    0 && (
+                    <div className="course-card-skills">
 
-                    {course.skills
-                      .slice(0, 2)
-                      .map(
-                        (
-                          skill,
-                          skillIndex
-                        ) => (
-                          <span
-                            key={`${skill}-${skillIndex}`}
-                            className="skill-tag"
-                          >
-                            {skill}
-                          </span>
+                      {course.skills
+                        .slice(
+                          0,
+                          3
                         )
+                        .map(
+                          (
+                            skill
+                          ) => (
+                            <span
+                              key={
+                                skill
+                              }
+                              className="skill-pill"
+                            >
+                              {
+                                skill
+                              }
+                            </span>
+                          )
+                        )}
+
+                      {course
+                        .skills
+                        .length >
+                        3 && (
+                        <span className="skill-pill more">
+                          +
+                          {course
+                            .skills
+                            .length -
+                            3}
+                        </span>
                       )}
 
-                  </div>
+                    </div>
+                  )}
 
-                  {/* Footer */}
-                  <div className="course-card-footer">
+                </div>
 
-                    <span>
-                      <BookOpen size={13} />
+                {/* Course footer */}
+                <div className="course-card-footer">
 
-                      {course.completedLessons}
-                      /
+                  <div className="course-card-meta">
+
+                    {course.certificate && (
+                      <span className="meta-badge">
+                        <Award
+                          size={12}
+                        />
+                        Certificate
+                      </span>
+                    )}
+
+                    <span className="meta-badge">
+                      <BookOpen
+                        size={12}
+                      />
                       {course.totalLessons}{' '}
                       lessons
                     </span>
 
-                    {course.certificate && (
-                      <span className="cert-pill">
-
-                        <Award size={13} />
-
-                        Certificate
-
-                      </span>
-                    )}
-
                   </div>
 
-                  {/* CTA */}
                   <button
-                    className="course-card-cta"
+                    className="course-enroll-btn"
                     style={{
-                      background:
+                      '--course-color':
                         course.color,
                     }}
                     onClick={(e) => {
@@ -998,7 +1034,7 @@ export default function Courses() {
 
             <p>
               Try a different search
-              term, category, or level.
+              term, domain, or level.
             </p>
 
           </div>

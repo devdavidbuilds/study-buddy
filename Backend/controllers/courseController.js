@@ -2,6 +2,7 @@ const validator = require("validator");
 const Course = require("../models/Course");
 const User = require("../models/User");
 const { canAccessCourseContent } = require("../utils/enrollment");
+const { DOMAIN_DEFINITIONS, determineDomain } = require("../utils/domainHelper");
 
 // Answer keys and their explanations are only revealed by the server-side
 // lesson check (progressController.submitLessonCheck).
@@ -36,6 +37,7 @@ const createCourse = async (req, res) => {
       description,
       thumbnail,
       category,
+      domain,
       level,
       duration,
       color,
@@ -77,6 +79,7 @@ const createCourse = async (req, res) => {
       description,
       thumbnail,
       category,
+      domain,
       level,
       duration,
       color,
@@ -128,6 +131,7 @@ const getAllCourses = async (req, res) => {
     }
     const search = String(req.query.search || "").trim();
     const category = String(req.query.category || "").trim();
+    const domain = String(req.query.domain || "").trim();
     const level = String(req.query.level || "").trim();
 
     if (search) {
@@ -138,6 +142,7 @@ const getAllCourses = async (req, res) => {
       filters.$or = [
         { courseName: searchRegex },
         { courseCode: searchRegex },
+        { domain: searchRegex },
         { category: searchRegex },
         { department: searchRegex },
         { faculty: { $in: matchingFaculty.map((faculty) => faculty._id) } },
@@ -148,22 +153,50 @@ const getAllCourses = async (req, res) => {
       filters.level = level;
     }
 
-    if (category && category !== "All") {
-      const categoryPatterns = {
-        Programming: ["program", "development", "software", "web", "code", "computer"],
-        "Data Science": ["data", "machine", "statistics", "analytics"],
-        Design: ["design", "graphic", "ui", "ux"],
-        Productivity: ["productivity", "office", "business"],
+    // Domain & Category filter
+    const activeDomain =
+      domain && domain !== "All"
+        ? domain
+        : category && category !== "All"
+        ? category
+        : "";
+
+    if (activeDomain) {
+      const domainDef = DOMAIN_DEFINITIONS.find(
+        (d) => d.id.toLowerCase() === activeDomain.toLowerCase()
+      );
+      const patterns = domainDef
+        ? domainDef.patterns.map((p) => p.source)
+        : [activeDomain];
+
+      const domainFilter = {
+        $or: [
+          { domain: new RegExp(activeDomain, "i") },
+          { category: { $in: patterns.map((p) => new RegExp(p, "i")) } },
+          { department: new RegExp(activeDomain, "i") },
+        ],
       };
-      const terms = categoryPatterns[category] || [category];
-      filters.category = { $in: terms.map((term) => new RegExp(term, "i")) };
+
+      if (filters.$or) {
+        filters.$and = [{ $or: filters.$or }, domainFilter];
+        delete filters.$or;
+      } else {
+        filters.$or = domainFilter.$or;
+      }
     }
 
-    const sort = req.query.sort === "rating"
-      ? { rating: -1, createdAt: -1 }
-      : req.query.sort === "students"
-      ? { students: -1, createdAt: -1 }
-      : { createdAt: -1 };
+    let sort = { createdAt: -1 };
+    if (req.query.sort === "domain" || req.query.sort === "domain_asc") {
+      sort = { domain: 1, courseName: 1 };
+    } else if (req.query.sort === "domain_desc") {
+      sort = { domain: -1, courseName: 1 };
+    } else if (req.query.sort === "rating") {
+      sort = { rating: -1, createdAt: -1 };
+    } else if (req.query.sort === "students") {
+      sort = { students: -1, createdAt: -1 };
+    } else if (req.query.sort === "name" || req.query.sort === "title") {
+      sort = { courseName: 1 };
+    }
 
     // Run count and paginated query in parallel for performance
     const [total, courses] = await Promise.all([
@@ -464,9 +497,72 @@ const getMyFacultyCourses = async (req, res) => {
   }
 };
 
+// ==========================
+// Get Course Domains
+// GET /api/courses/domains
+// ==========================
+const getCourseDomains = async (req, res) => {
+  try {
+    const counts = await Course.aggregate([
+      { $match: { status: "Active" } },
+      {
+        $group: {
+          _id: { $ifNull: ["$domain", "$category"] },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+    ]);
+
+    const total = counts.reduce((acc, c) => acc + c.count, 0);
+
+    const domainList = [
+      { id: "All", label: "All Domains", count: total },
+      ...DOMAIN_DEFINITIONS.map((d) => {
+        const found = counts.find(
+          (c) => c._id && c._id.toLowerCase() === d.id.toLowerCase()
+        );
+        return {
+          id: d.id,
+          label: d.label,
+          icon: d.icon,
+          count: found ? found.count : 0,
+        };
+      }),
+      // Any custom categories/domains outside predefined list
+      ...counts
+        .filter(
+          (c) =>
+            c._id &&
+            !DOMAIN_DEFINITIONS.some(
+              (d) => d.id.toLowerCase() === c._id.toLowerCase()
+            )
+        )
+        .map((c) => ({
+          id: c._id,
+          label: c._id,
+          icon: "📚",
+          count: c.count,
+        })),
+    ];
+
+    res.status(200).json({
+      success: true,
+      data: domainList,
+    });
+  } catch (error) {
+    console.error("Get Course Domains Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createCourse,
   getAllCourses,
+  getCourseDomains,
   getMyFacultyCourses,
   getCourseById,
   updateCourse,
