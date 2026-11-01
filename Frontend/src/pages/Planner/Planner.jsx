@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
   Plus,
@@ -11,12 +11,19 @@ import {
   CalendarCheck,
   BookOpen,
   Search,
+  Play,
+  Pause,
+  RotateCcw,
+  Bell,
+  Coffee,
+  Sparkles,
+  X,
 } from 'lucide-react';
 import GlassCard from '../../components/ui/GlassCard';
 import PageState from '../../components/ui/PageState';
 import Modal from '../../components/ui/Modal';
 import ProgressBar from '../../components/ui/ProgressBar';
-import { getCourses } from '../../api/courseApi';
+import { getCourses, getCourse } from '../../api/courseApi';
 import {
   getStudySessions,
   createStudySession,
@@ -53,6 +60,13 @@ const formatMinutes = (minutes) => {
   return m ? `${h}h ${m}m` : `${h}h`;
 };
 
+const formatSeconds = (totalSec) => {
+  const sec = Math.max(0, Math.floor(totalSec));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
 const endTime = (startTime, duration) => {
   const [h, m] = startTime.split(':').map(Number);
   const total = h * 60 + m + duration;
@@ -65,9 +79,47 @@ const courseColor = (courseId = '') => {
   return COURSE_COLORS[hash % COURSE_COLORS.length];
 };
 
+// Play a pleasant two-tone chime via Web Audio API when study time expires
+const playExpirationAlarm = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    // Tone 1: D5 (587 Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(587.33, now);
+    gain1.gain.setValueAtTime(0.25, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.4);
+
+    // Tone 2: A5 (880 Hz)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(880, now + 0.22);
+    gain2.gain.setValueAtTime(0.3, now + 0.22);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.22);
+    osc2.stop(now + 0.85);
+  } catch {
+    // Audio Context unavailable or restricted by browser
+  }
+};
+
 const emptyForm = (date) => ({
   id: null,
   course: null,
+  moduleId: '',
+  moduleName: '',
   date,
   startTime: '18:00',
   durationMinutes: 60,
@@ -91,12 +143,20 @@ export default function Planner() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Available modules for the chosen course
+  const [courseModules, setCourseModules] = useState([]);
+  const [loadingModules, setLoadingModules] = useState(false);
+
   const [courseQuery, setCourseQuery] = useState('');
   const [courseResults, setCourseResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
   const [editingGoal, setEditingGoal] = useState(null);
   const [goalHours, setGoalHours] = useState('');
+
+  // ── Active Focus Timer & Expiration Reminder State ──
+  const [activeTimer, setActiveTimer] = useState(null);
+  const [expiredReminder, setExpiredReminder] = useState(null);
 
   const todayKey = toDateKey(new Date());
   const weekDays = useMemo(
@@ -131,6 +191,49 @@ export default function Planner() {
     loadPlanner();
   }, [loadPlanner]);
 
+  // Request browser notification permission gently when component mounts
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
+  // ── Focus Countdown Timer Tick Effect ──
+  useEffect(() => {
+    if (!activeTimer || !activeTimer.isRunning) return undefined;
+
+    const interval = setInterval(() => {
+      setActiveTimer((prev) => {
+        if (!prev || !prev.isRunning) return prev;
+        if (prev.remainingSeconds <= 1) {
+          // Timer expired! Trigger audio chime and modal reminder
+          playExpirationAlarm();
+
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification("⏰ Study Time Allocation Expired!", {
+                body: `Your allocated time for ${prev.courseName} ${prev.moduleName ? `(${prev.moduleName})` : ''} has ended. Great job!`,
+                icon: '/favicon.svg',
+              });
+            } catch {}
+          }
+
+          setExpiredReminder({
+            session: prev.session,
+            courseName: prev.courseName,
+            moduleName: prev.moduleName,
+            durationMinutes: Math.round(prev.totalSeconds / 60),
+          });
+
+          return { ...prev, remainingSeconds: 0, isRunning: false };
+        }
+        return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeTimer?.isRunning]);
+
   // Debounced course search for the picker.
   useEffect(() => {
     if (!modalOpen || form.id) return undefined;
@@ -150,8 +253,31 @@ export default function Planner() {
     return () => clearTimeout(timer);
   }, [courseQuery, modalOpen, form.id]);
 
+  // Load modules whenever a course is picked
+  const loadModulesForCourse = async (courseId, fallbackModules = []) => {
+    if (fallbackModules && fallbackModules.length > 0) {
+      setCourseModules(fallbackModules);
+      return;
+    }
+    setLoadingModules(true);
+    try {
+      const res = await getCourse(courseId);
+      const data = res?.data?.data || res?.data;
+      if (data && Array.isArray(data.modules)) {
+        setCourseModules(data.modules);
+      } else {
+        setCourseModules([]);
+      }
+    } catch {
+      setCourseModules([]);
+    } finally {
+      setLoadingModules(false);
+    }
+  };
+
   const openCreate = (date = todayKey) => {
     setForm(emptyForm(date));
+    setCourseModules([]);
     setCourseQuery('');
     setFormError('');
     setModalOpen(true);
@@ -161,6 +287,8 @@ export default function Planner() {
     setForm({
       id: session._id,
       course: { _id: session.course, courseName: session.courseName, courseCode: session.courseCode },
+      moduleId: session.moduleId || '',
+      moduleName: session.moduleName || '',
       date: session.date,
       startTime: session.startTime,
       durationMinutes: session.durationMinutes,
@@ -171,6 +299,21 @@ export default function Planner() {
     });
     setFormError('');
     setModalOpen(true);
+
+    if (session.course) {
+      loadModulesForCourse(session.course);
+    }
+  };
+
+  const handleSelectCourse = (course) => {
+    setForm((prev) => ({
+      ...prev,
+      course,
+      moduleId: '',
+      moduleName: '',
+      title: prev.title || `Prepare for ${course.courseName}`,
+    }));
+    loadModulesForCourse(course._id, course.modules);
   };
 
   const updateForm = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
@@ -196,6 +339,8 @@ export default function Planner() {
           durationMinutes: Number(form.durationMinutes),
           title: form.title.trim(),
           notes: form.notes.trim(),
+          moduleId: form.moduleId || '',
+          moduleName: form.moduleName || '',
         });
       } else {
         await createStudySession({
@@ -205,6 +350,8 @@ export default function Planner() {
           durationMinutes: Number(form.durationMinutes),
           title: form.title.trim(),
           notes: form.notes.trim(),
+          moduleId: form.moduleId || '',
+          moduleName: form.moduleName || '',
           repeatWeeks: Number(form.repeatWeeks),
         });
 
@@ -258,6 +405,59 @@ export default function Planner() {
     }
   };
 
+  // ── Focus Timer Action Triggers ──
+  const startSessionTimer = (session) => {
+    const totalSec = Math.max(60, Number(session.durationMinutes || 60) * 60);
+    setActiveTimer({
+      session,
+      courseId: session.course,
+      courseName: session.courseName,
+      courseCode: session.courseCode,
+      moduleId: session.moduleId,
+      moduleName: session.moduleName,
+      totalSeconds: totalSec,
+      remainingSeconds: totalSec,
+      isRunning: true,
+    });
+  };
+
+  const startCourseAllocationTimer = (row) => {
+    const defaultMins = row.planned || row.goal || 45;
+    const totalSec = Math.max(60, defaultMins * 60);
+    setActiveTimer({
+      session: null,
+      courseId: row.courseId,
+      courseName: row.courseName,
+      courseCode: row.courseCode,
+      moduleId: '',
+      moduleName: '',
+      totalSeconds: totalSec,
+      remainingSeconds: totalSec,
+      isRunning: true,
+    });
+  };
+
+  const extendTimer = (extraSeconds = 300) => {
+    setActiveTimer((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        remainingSeconds: prev.remainingSeconds + extraSeconds,
+        totalSeconds: prev.totalSeconds + extraSeconds,
+        isRunning: true,
+      };
+    });
+    setExpiredReminder(null);
+  };
+
+  const finishTimerAndMarkDone = async () => {
+    if (expiredReminder?.session?._id) {
+      await toggleComplete(expiredReminder.session);
+    }
+    setExpiredReminder(null);
+    setActiveTimer(null);
+  };
+
   // Weekly totals and per-course time allocation.
   const plannedMinutes = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
   const completedMinutes = sessions
@@ -309,13 +509,81 @@ export default function Planner() {
           <p>
             {sessions.length
               ? `${completedCount}/${sessions.length} sessions complete · ${formatMinutes(completedMinutes)} of ${formatMinutes(plannedMinutes)} studied this week`
-              : 'Pick a course and set aside time to prepare for it.'}
+              : 'Pick a course, select a module, and set aside focused time to study.'}
           </p>
         </div>
         <button className="btn btn-primary btn-sm" onClick={() => openCreate()}>
           <Plus size={16} /> Add Session
         </button>
       </div>
+
+      {/* ── Active Focus Timer Bar / Widget ── */}
+      {activeTimer && (
+        <GlassCard compact className="active-timer-banner animate-fade-in" style={{ marginBottom: 'var(--space-6)', border: '1px solid var(--color-primary-muted)', background: 'linear-gradient(135deg, rgba(231,84,128,0.06), rgba(99,102,241,0.04))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Clock size={24} style={{ color: activeTimer.isRunning ? 'var(--color-primary)' : 'var(--text-tertiary)' }} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <h4 style={{ margin: 0, fontSize: 'var(--font-size-base)', fontWeight: 'var(--font-weight-semibold)' }}>
+                    {activeTimer.courseName}
+                  </h4>
+                  {activeTimer.moduleName && (
+                    <span className="badge badge-accent" style={{ fontSize: '11px' }}>
+                      📖 {activeTimer.moduleName}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)' }}>
+                  {activeTimer.isRunning ? 'Focus session active' : 'Focus session paused'} · Allocated: {formatMinutes(Math.round(activeTimer.totalSeconds / 60))}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '1px', color: activeTimer.remainingSeconds < 60 ? 'var(--color-danger)' : 'var(--text-primary)' }}>
+                {formatSeconds(activeTimer.remainingSeconds)}
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setActiveTimer((prev) => ({ ...prev, isRunning: !prev.isRunning }))}
+                  title={activeTimer.isRunning ? 'Pause Timer' : 'Resume Timer'}
+                >
+                  {activeTimer.isRunning ? <Pause size={16} /> : <Play size={16} />}
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => extendTimer(300)}
+                  title="Add 5 minutes"
+                >
+                  +5m
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    if (window.confirm('Finish this focus timer now?')) {
+                      setActiveTimer(null);
+                    }
+                  }}
+                  title="Close Timer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: 'var(--space-2)' }}>
+            <ProgressBar
+              value={activeTimer.totalSeconds ? Math.min(100, Math.round(((activeTimer.totalSeconds - activeTimer.remainingSeconds) / activeTimer.totalSeconds) * 100)) : 0}
+              size="sm"
+              color="var(--color-primary)"
+            />
+          </div>
+        </GlassCard>
+      )}
 
       <div className="planner-stats">
         <GlassCard compact className="planner-stat">
@@ -388,12 +656,44 @@ export default function Planner() {
                   </button>
                   <div className={`planner-task-info ${session.completed ? 'done' : ''}`} onClick={() => openEdit(session)}>
                     <h5>{session.courseName}</h5>
+                    {session.moduleName && (
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          fontSize: '10px',
+                          color: 'var(--color-primary)',
+                          background: 'rgba(231,84,128,0.12)',
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          marginBottom: '2px',
+                        }}
+                      >
+                        📖 {session.moduleName}
+                      </span>
+                    )}
                     {session.title && <p>{session.title}</p>}
                     <span>{session.startTime}–{endTime(session.startTime, session.durationMinutes)} · {formatMinutes(session.durationMinutes)}</span>
                   </div>
-                  <button className="planner-task-delete" onClick={() => removeSession(session)} aria-label="Remove session">
-                    <Trash2 size={12} />
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <button
+                      className="planner-task-timer-btn"
+                      onClick={() => startSessionTimer(session)}
+                      title="Start Focus Timer for this session"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-primary)',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        opacity: 0.8,
+                      }}
+                    >
+                      <Play size={13} />
+                    </button>
+                    <button className="planner-task-delete" onClick={() => removeSession(session)} aria-label="Remove session">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -407,6 +707,7 @@ export default function Planner() {
         })}
       </div>
 
+      {/* ── Course Time Allocation ── */}
       <h3 className="section-title">⏱️ Course Time Allocation</h3>
       <GlassCard className="planner-allocation">
         {allocations.length === 0 ? (
@@ -432,39 +733,51 @@ export default function Planner() {
                     {row.goal && row.planned < row.goal ? ` · ${formatMinutes(row.goal - row.planned)} left to schedule` : ''}
                   </p>
                 </div>
-                {editingGoal === row.courseId ? (
-                  <div className="allocation-goal-edit">
-                    <input
-                      type="number"
-                      min="0"
-                      max="70"
-                      step="0.5"
-                      className="input-field"
-                      value={goalHours}
-                      onChange={(e) => setGoalHours(e.target.value)}
-                      aria-label="Weekly goal in hours"
-                    />
-                    <span>h/week</span>
-                    <button className="btn btn-primary btn-sm" onClick={() => saveGoal(row.courseId)}>Save</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setEditingGoal(null)}>Cancel</button>
-                  </div>
-                ) : (
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                   <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      setEditingGoal(row.courseId);
-                      setGoalHours(row.goal ? String(row.goal / 60) : '');
-                    }}
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => startCourseAllocationTimer(row)}
+                    title="Start focus timer for this allocated course"
                   >
-                    <Target size={14} /> {row.goal ? 'Edit goal' : 'Set goal'}
+                    <Play size={13} /> Focus Timer
                   </button>
-                )}
+
+                  {editingGoal === row.courseId ? (
+                    <div className="allocation-goal-edit">
+                      <input
+                        type="number"
+                        min="0"
+                        max="70"
+                        step="0.5"
+                        className="input-field"
+                        value={goalHours}
+                        onChange={(e) => setGoalHours(e.target.value)}
+                        aria-label="Weekly goal in hours"
+                      />
+                      <span>h/week</span>
+                      <button className="btn btn-primary btn-sm" onClick={() => saveGoal(row.courseId)}>Save</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditingGoal(null)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        setEditingGoal(row.courseId);
+                        setGoalHours(row.goal ? String(row.goal / 60) : '');
+                      }}
+                    >
+                      <Target size={14} /> {row.goal ? 'Edit goal' : 'Set goal'}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })
         )}
       </GlassCard>
 
+      {/* ── Today's Schedule ── */}
       <h3 className="section-title">📅 Today's Schedule</h3>
       <GlassCard>
         {todaySessions.length === 0 ? (
@@ -482,9 +795,23 @@ export default function Planner() {
                   <h4 style={item.completed ? { textDecoration: 'line-through' } : undefined}>
                     {item.title || `${item.courseName} preparation`}
                   </h4>
-                  <p>{item.courseName}{item.notes ? ` · ${item.notes}` : ''}</p>
+                  <p>
+                    {item.courseName}
+                    {item.moduleName ? ` · 📖 ${item.moduleName}` : ''}
+                    {item.notes ? ` · ${item.notes}` : ''}
+                  </p>
                 </div>
                 <span className="schedule-duration">{formatMinutes(item.durationMinutes)}</span>
+
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => startSessionTimer(item)}
+                  title="Start Focus Timer for this session"
+                  style={{ color: 'var(--color-primary)' }}
+                >
+                  <Play size={14} /> Focus
+                </button>
+
                 <button
                   className={`planner-task-check ${item.completed ? 'done' : ''}`}
                   onClick={() => toggleComplete(item)}
@@ -498,6 +825,55 @@ export default function Planner() {
         )}
       </GlassCard>
 
+      {/* ── Time Allocation Expired Reminder Modal ── */}
+      {expiredReminder && (
+        <Modal
+          isOpen={true}
+          onClose={() => setExpiredReminder(null)}
+          title="⏰ Study Time Allocation Expired!"
+          footer={(
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setExpiredReminder(null);
+                  setActiveTimer(null);
+                }}
+              >
+                <Coffee size={14} /> Take a Break
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => extendTimer(300)}
+              >
+                <Clock size={14} /> +5 More Minutes
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={finishTimerAndMarkDone}
+              >
+                <Check size={14} /> Mark Session Done
+              </button>
+            </div>
+          )}
+        >
+          <div style={{ textAlign: 'center', padding: 'var(--space-4) var(--space-2)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: 'var(--space-2)' }}>🌸🎉</div>
+            <h3 style={{ marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)' }}>
+              Great Work! Your Focus Time Has Ended
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', maxWidth: '440px', margin: '0 auto var(--space-4)' }}>
+              You've completed your allocated study block of <strong>{formatMinutes(expiredReminder.durationMinutes)}</strong> for <strong>{expiredReminder.courseName}</strong>
+              {expiredReminder.moduleName ? ` on module "${expiredReminder.moduleName}"` : ''}.
+            </p>
+            <div style={{ background: 'var(--glass-bg-light)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'inline-block', textAlign: 'left', fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
+              💡 <em>Tip: Giving yourself a 5-minute breather helps consolidate what you just reviewed before moving on!</em>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Create / Edit Study Session Modal ── */}
       <Modal
         isOpen={modalOpen}
         onClose={() => !saving && setModalOpen(false)}
@@ -522,7 +898,7 @@ export default function Planner() {
                   {form.course.courseCode && <span> · {form.course.courseCode}</span>}
                 </div>
                 {!form.id && (
-                  <button className="btn btn-ghost btn-sm" onClick={() => updateForm('course', null)}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { updateForm('course', null); setCourseModules([]); }}>
                     <Pencil size={12} /> Change
                   </button>
                 )}
@@ -548,7 +924,7 @@ export default function Planner() {
                     <button
                       key={course._id}
                       className="planner-course-option"
-                      onClick={() => updateForm('course', course)}
+                      onClick={() => handleSelectCourse(course)}
                     >
                       <span className="schedule-dot" style={{ background: courseColor(course._id) }} />
                       <span>{course.courseName}</span>
@@ -559,6 +935,40 @@ export default function Planner() {
               </>
             )}
           </div>
+
+          {/* ── Choose Module for the Session ── */}
+          {form.course && (
+            <div className="input-group">
+              <label className="input-label">Choose Module (optional)</label>
+              {loadingModules ? (
+                <p className="planner-hint">Loading modules…</p>
+              ) : (
+                <select
+                  className="input-field"
+                  value={form.moduleId || ''}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const mod = courseModules.find((m) => String(m.id || m._id) === selectedId);
+                    updateForm('moduleId', selectedId);
+                    updateForm('moduleName', mod ? mod.title : '');
+                    if (mod && (!form.title || form.title.startsWith('Prepare for'))) {
+                      updateForm('title', `Study: ${mod.title}`);
+                    }
+                  }}
+                >
+                  <option value="">General Course Study (All Modules)</option>
+                  {courseModules.map((m, idx) => (
+                    <option key={m.id || m._id || idx} value={m.id || m._id}>
+                      Module {m.moduleNumber || idx + 1}: {m.title}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {courseModules.length === 0 && !loadingModules && (
+                <span className="planner-hint">No sub-modules found for this course; whole-course study will be planned.</span>
+              )}
+            </div>
+          )}
 
           <div className="planner-form-row">
             <div className="input-group">
@@ -599,10 +1009,10 @@ export default function Planner() {
           </div>
 
           <div className="input-group">
-            <label className="input-label">Topic (optional)</label>
+            <label className="input-label">Topic / Specific Focus (optional)</label>
             <input
               className="input-field"
-              placeholder="e.g. Revise unit 3, practise past papers"
+              placeholder="e.g. Revise practice questions, code assignments"
               value={form.title}
               maxLength={120}
               onChange={(e) => updateForm('title', e.target.value)}

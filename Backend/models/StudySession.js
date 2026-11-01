@@ -30,6 +30,9 @@ const studySessionSchema = new mongoose.Schema(
     courseName: { type: String, required: true, trim: true },
     courseCode: { type: String, default: "", trim: true },
 
+    moduleId: { type: String, default: "", trim: true },
+    moduleName: { type: String, default: "", trim: true },
+
     title: {
       type: String,
       trim: true,

@@ -105,6 +105,8 @@ const createSession = async (req, res) => {
       durationMinutes,
       title = "",
       notes = "",
+      moduleId = "",
+      moduleName = "",
     } = req.body;
     const repeatWeeks = Math.min(
       MAX_REPEAT_WEEKS,
@@ -141,7 +143,7 @@ const createSession = async (req, res) => {
     }
 
     const course = await Course.findById(courseId)
-      .select("courseName courseCode")
+      .select("courseName courseCode modules")
       .lean();
 
     if (!course) {
@@ -149,6 +151,14 @@ const createSession = async (req, res) => {
         success: false,
         message: "Course not found.",
       });
+    }
+
+    let resolvedModuleName = moduleName;
+    if (moduleId && !resolvedModuleName && Array.isArray(course.modules)) {
+      const mod = course.modules.find(
+        (m) => m.id === moduleId || String(m._id) === moduleId
+      );
+      if (mod) resolvedModuleName = mod.title;
     }
 
     const dates = Array.from({ length: repeatWeeks + 1 }, (_, i) =>
@@ -171,6 +181,8 @@ const createSession = async (req, res) => {
         course: course._id,
         courseName: course.courseName,
         courseCode: course.courseCode || "",
+        moduleId: moduleId || "",
+        moduleName: resolvedModuleName || "",
         title,
         notes,
         date: d,
@@ -221,8 +233,16 @@ const updateSession = async (req, res) => {
       });
     }
 
-    const { date, startTime, durationMinutes, title, notes, completed } =
-      req.body;
+    const {
+      date,
+      startTime,
+      durationMinutes,
+      title,
+      notes,
+      completed,
+      moduleId,
+      moduleName,
+    } = req.body;
 
     if (date !== undefined) {
       if (!isValidDate(date)) {
@@ -236,6 +256,8 @@ const updateSession = async (req, res) => {
     }
     if (title !== undefined) session.title = title;
     if (notes !== undefined) session.notes = notes;
+    if (moduleId !== undefined) session.moduleId = moduleId;
+    if (moduleName !== undefined) session.moduleName = moduleName;
     if (completed !== undefined) {
       session.completed = Boolean(completed);
       session.completedAt = session.completed ? new Date() : null;
