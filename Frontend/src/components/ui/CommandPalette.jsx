@@ -10,7 +10,7 @@ const commands = [
     { label: 'Go to Code Lab', action: '/code-lab', icon: '💻' },
     { label: 'Go to Planner', action: '/planner', icon: '📅' },
     { label: 'Go to Assignments', action: '/assignments', icon: '📝' },
-    { label: 'Go to AI Tutor', action: '/ai-tutor', icon: '🌸' },
+    { label: 'Go to Buddy', action: '/ai-tutor', icon: '🌸' },
     { label: 'Go to Notes', action: '/notes', icon: '📒' },
     { label: 'Go to Achievements', action: '/achievements', icon: '🏆' },
     { label: 'Go to Progress', action: '/progress', icon: '📈' },
@@ -20,7 +20,7 @@ const commands = [
   ]},
   { group: 'Actions', items: [
     { label: 'Create New Note', action: '/notes', icon: '📒' },
-    { label: 'Ask AI Tutor', action: '/ai-tutor', icon: '✨' },
+    { label: 'Ask Buddy', action: '/ai-tutor', icon: '✨' },
     { label: 'Sign Out', action: 'logout', icon: '🚪' },
   ]},
 ];

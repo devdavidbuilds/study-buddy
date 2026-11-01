@@ -61,7 +61,7 @@ export default function Landing() {
   }, []);
 
   const features = [
-    { title: 'AI Tutor', description: 'Get nuanced explanations and study help in real time.', icon: 'Brain' },
+    { title: 'Buddy AI', description: 'Get nuanced explanations and study help from Buddy in real time.', icon: 'Brain' },
     { title: 'Code Lab', description: 'Run code, compare outputs, and work through challenge problems.', icon: 'Terminal' },
     { title: 'Progress Insights', description: 'Track growth with elegant analytics and milestones.', icon: 'BarChart3' },
     { title: 'Calm Planning', description: 'Keep your schedule, notes, and tasks in one beautiful workspace.', icon: 'LayoutDashboard' },

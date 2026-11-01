@@ -158,14 +158,14 @@ export const platformStats = [
 ];
 
 export const testimonials = [
-  { id: 1, name: 'Emma Watson', role: 'CS Student, MIT', text: 'Study Buddy transformed how I learn. The AI Tutor is incredible — it feels like having a personal teacher.', avatarColor: '#E75480', rating: 5 },
+  { id: 1, name: 'Emma Watson', role: 'CS Student, MIT', text: 'Study Buddy transformed how I learn. Buddy is incredible — it feels like having a personal teacher.', avatarColor: '#E75480', rating: 5 },
   { id: 2, name: 'Ryan Park', role: 'Engineering, Stanford', text: 'The workspace is so calm and well designed. I went from disorganized to genuinely excited to study.', avatarColor: '#C9B6E4', rating: 5 },
   { id: 3, name: 'Aisha Malik', role: 'Data Science, Berkeley', text: 'Finally a learning platform that feels peaceful instead of overwhelming. The progress tracking keeps me motivated daily.', avatarColor: '#F4B3CE', rating: 5 },
 ];
 
 export const features = [
   { title: 'Personalized Study Planner', description: 'Organize every course, deadline, and study session in one calm, focused workspace.', icon: 'LayoutDashboard' },
-  { title: 'AI Tutor', description: 'Ask questions, generate notes, and get concepts explained in plain language, any time.', icon: 'Terminal' },
+  { title: 'Buddy AI', description: 'Ask questions, generate notes, and get concepts explained by Buddy in plain language, any time.', icon: 'Terminal' },
   { title: 'Smart Recommendations', description: 'Personalized learning paths and course suggestions based on how you actually study.', icon: 'Brain' },
   { title: 'Progress Insights', description: 'Beautiful, gentle analytics that show your growth without the pressure.', icon: 'BarChart3' },
   { title: 'Guided Courses', description: 'Bite-sized lessons, quizzes, and resources designed by subject experts.', icon: 'Users' },

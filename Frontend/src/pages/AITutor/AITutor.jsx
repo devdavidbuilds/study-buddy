@@ -41,8 +41,8 @@ export default function AITutor() {
     if (!messages.length || onlyGreeting) {
       const courseName = courseContext?.course?.courseName;
       const greeting = courseName
-        ? `Hi ${String(profile?.fullName || 'there').split(' ')[0]}! 🌸 I'm your AI Tutor. You're studying **${courseName}** — ask me anything about it, or any other topic!`
-        : `Hi ${String(profile?.fullName || 'there').split(' ')[0]}! 🌸 I'm your AI Tutor. Ask me anything — any subject, programming question, or concept.`;
+        ? `Hi ${String(profile?.fullName || 'there').split(' ')[0]}! 🌸 I'm Buddy, your personal AI study companion. You're studying **${courseName}** — ask me anything about it, or any other topic!`
+        : `Hi ${String(profile?.fullName || 'there').split(' ')[0]}! 🌸 I'm Buddy, your personal AI study companion. Ask me anything — any subject, programming question, or concept.`;
       if (!onlyGreeting || messages[0].text !== greeting) {
         setMessages([{ id: 1, role: 'ai', text: greeting }]);
       }
@@ -115,11 +115,11 @@ export default function AITutor() {
     <div className="ai-tutor-page animate-fade-in">
       <div className="page-header" style={{ marginBottom: 'var(--space-4)' }}>
         <div>
-          <h1><Sparkles size={22} style={{ color: 'var(--color-accent)', verticalAlign: '-3px' }} /> AI Tutor</h1>
+          <h1><Sparkles size={22} style={{ color: 'var(--color-accent)', verticalAlign: '-3px' }} /> Buddy</h1>
           <p>
             {courseContext?.course?.courseName
               ? `Studying: ${courseContext.course.courseName}`
-              : 'Ask questions, get explanations, debug code — anytime.'}
+              : 'Ask questions, get explanations, debug code with Buddy — anytime.'}
           </p>
         </div>
         <div className="ai-tool-row" style={{ marginBottom: 0 }}>
@@ -128,7 +128,7 @@ export default function AITutor() {
             onClick={() => setEngine('tutor')}
             disabled={loading}
           >
-            AI Tutor
+            Buddy
           </button>
           <button
             className={`chip${engine === 'finetuned' ? ' active' : ''}`}
@@ -164,7 +164,7 @@ export default function AITutor() {
       <div className="ai-input-bar">
         <input
           type="text"
-          placeholder="Ask your AI Tutor anything..."
+          placeholder="Ask Buddy anything..."
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

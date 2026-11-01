@@ -1036,7 +1036,7 @@ export default function CourseLearn() {
                     }
                   >
                     <Sparkles size={14} />
-                    Ask AI Tutor
+                    Ask Buddy
                   </button>
                 </div>
               )}
@@ -1452,7 +1452,7 @@ export default function CourseLearn() {
               Need Help?
             </div>
             <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-3)' }}>
-              Ask the AI Tutor about this lesson.
+              Ask Buddy about this lesson.
             </p>
             <button
               type="button"
@@ -1465,7 +1465,7 @@ export default function CourseLearn() {
               }
             >
               <Sparkles size={14} />
-              Ask AI Tutor
+              Ask Buddy
             </button>
           </GlassCard>
         </div>

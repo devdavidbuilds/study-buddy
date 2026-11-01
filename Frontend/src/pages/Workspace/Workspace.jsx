@@ -17,7 +17,7 @@ import './Workspace.css';
 
 const quickActions = [
   { icon: '📝', label: 'New Note', to: '/notes' },
-  { icon: '🌸', label: 'AI Tutor', to: '/ai-tutor' },
+  { icon: '🌸', label: 'Buddy', to: '/ai-tutor' },
   { icon: '📋', label: 'Start Quiz', to: '/courses' },
   { icon: '📅', label: 'Planner', to: '/planner' },
 ];

@@ -306,7 +306,7 @@ function createGeneralResponse({ question, history }) {
     return `**${capitalizeWords(topic)}**\n\nI understand you're asking about **${topic}**. While I don't have pre-loaded material on this specific topic, I can help you if you:\n\n1. Ask a more specific question about it\n2. Share code or text you need help with\n3. Tell me what aspect you'd like explained\n\nI'm here to help with any academic subject, programming question, or concept explanation.`;
   }
 
-  return "I'm your AI Tutor — I can help with any subject, programming question, or concept. Just type your question!";
+  return "I'm Buddy, your personal AI study companion — I can help with any subject, programming question, or concept. Just type your question!";
 }
 
 function findKnowledgeMatchFromTerms(terms) {

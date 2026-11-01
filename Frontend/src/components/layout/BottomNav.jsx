@@ -6,7 +6,7 @@ const items = [
   { to: '/courses', icon: BookOpen, label: 'Courses' },
   { to: '/code-lab', icon: Code2, label: 'Code Lab' },
   { to: '/planner', icon: CalendarDays, label: 'Planner' },
-  { to: '/ai-tutor', icon: Sparkles, label: 'AI' },
+  { to: '/ai-tutor', icon: Sparkles, label: 'Buddy' },
 ];
 
 export default function BottomNav() {

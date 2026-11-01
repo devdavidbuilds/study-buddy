@@ -6,10 +6,10 @@ const { getLLMConfig, isConfigured, createLLMClient, describeError, classifyLLME
 // AI model. Deliberately generic: no provider details or configuration names.
 const FALLBACK_NOTICES = {
   not_configured: "The AI model isn't available right now, so this is a basic built-in answer.",
-  quota: "The AI tutor has reached its usage limit for now, so this is a basic built-in answer. Please try again later.",
-  timeout: "The AI tutor took too long to respond, so this is a basic built-in answer. Please try again.",
+  quota: "Buddy has reached the usage limit for now, so this is a basic built-in answer. Please try again later.",
+  timeout: "Buddy took too long to respond, so this is a basic built-in answer. Please try again.",
   auth: "The AI model isn't available right now, so this is a basic built-in answer.",
-  provider: "The AI tutor ran into a problem, so this is a basic built-in answer. Please try again.",
+  provider: "Buddy ran into a problem, so this is a basic built-in answer. Please try again.",
 };
 
 let warnedNotConfigured = false;
@@ -28,7 +28,7 @@ const TUTOR_DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
 // ==============================
 
 const TUTOR_SYSTEM_PROMPT = [
-  "You are the AI Tutor in Study Buddy, a learning platform for university students.",
+  "You are Buddy, the personal AI Tutor in Study Buddy, a learning platform for university students. Introduce and refer to yourself as Buddy.",
   "Explain concepts clearly and accurately, adapting depth to the student's question (simpler if they are confused, more rigorous if they ask for detail).",
   "For maths, science and programming, work step by step and show reasoning; use fenced code blocks for code.",
   "When the student asks for an exam-style answer (e.g. 2, 5, 8 or 15 marks), match the expected length and structure: definition, explanation, key points, example, and a diagram description where useful.",

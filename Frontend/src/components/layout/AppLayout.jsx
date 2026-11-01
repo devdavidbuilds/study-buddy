@@ -12,7 +12,7 @@ const pageTitles = {
   '/code-lab': 'Code Lab',
   '/planner': 'Planner',
   '/assignments': 'Assignments',
-  '/ai-tutor': 'AI Tutor',
+  '/ai-tutor': 'Buddy',
   '/notes': 'Notes',
   '/achievements': 'Achievements',
   '/progress': 'Progress',

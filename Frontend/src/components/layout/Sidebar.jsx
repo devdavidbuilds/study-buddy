@@ -13,7 +13,7 @@ const mainNav = [
   { to: '/code-lab', icon: Code2, label: 'Code Lab' },
   { to: '/planner', icon: CalendarDays, label: 'Planner' },
   { to: '/assignments', icon: ClipboardList, label: 'Assignments' },
-  { to: '/ai-tutor', icon: Sparkles, label: 'AI Tutor' },
+  { to: '/ai-tutor', icon: Sparkles, label: 'Buddy' },
   { to: '/notes', icon: NotebookPen, label: 'Notes' },
 ];
 
