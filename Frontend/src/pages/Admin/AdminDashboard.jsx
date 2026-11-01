@@ -102,6 +102,7 @@ export default function AdminDashboard() {
   // Initial load
   useEffect(() => {
     loadOverviewData();
+    loadFacultyData();
   }, []);
 
   // Tab change handlers
@@ -463,7 +464,7 @@ export default function AdminDashboard() {
                         <div className="activity-info">
                           <strong>{act.studentName}</strong>
                           <span className="activity-action">
-                            {act.activityType.toLowerCase().replace(/_/g, ' ')}
+                            {(act.activityType || 'active').toLowerCase().replace(/_/g, ' ')}
                           </span>
                           <strong className="activity-course">{act.courseName}</strong>
                           {act.domain && <span className="activity-domain-tag">{act.domain}</span>}
