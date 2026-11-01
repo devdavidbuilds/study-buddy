@@ -55,6 +55,13 @@ const userSchema = new mongoose.Schema(
       maxlength: [80, "Department cannot exceed 80 characters"],
     },
 
+    // Assigned domain for domain-based faculty roles
+    domain: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     yearOfStudy: {
       type: Number,
       min: [1, "Year of study must be between 1 and 6"],

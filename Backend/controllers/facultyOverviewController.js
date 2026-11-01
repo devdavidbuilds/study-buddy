@@ -21,7 +21,12 @@ const ACTIVITY_TEXT = {
 
 const getFacultyOverview = async (req, res) => {
   try {
-    const owned = req.user.role === "admin" ? {} : { faculty: req.user._id };
+    const owned =
+      req.user.role === "admin"
+        ? {}
+        : req.user.domain
+        ? { $or: [{ faculty: req.user._id }, { domain: req.user.domain }] }
+        : { faculty: req.user._id };
     const courseIds = (await Course.find(owned).select("_id").lean()).map((c) => c._id);
 
     const [progressDocs, activeAssignments] = await Promise.all([

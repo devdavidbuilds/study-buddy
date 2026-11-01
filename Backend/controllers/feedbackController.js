@@ -150,7 +150,10 @@ const getFacultyFeedback = async (req, res) => {
   try {
     const scope = {};
     if (req.user.role !== "admin") {
-      scope.course = { $in: (await Course.find({ faculty: req.user._id }).select("_id").lean()).map((c) => c._id) };
+      const courseFilter = req.user.domain
+        ? { $or: [{ faculty: req.user._id }, { domain: req.user.domain }] }
+        : { faculty: req.user._id };
+      scope.course = { $in: (await Course.find(courseFilter).select("_id").lean()).map((c) => c._id) };
     }
     const all = await CourseFeedback.find(scope)
       .sort({ createdAt: -1 })
@@ -218,8 +221,12 @@ const loadOwnedFeedback = async (req, res) => {
     res.status(404).json({ success: false, message: "Feedback not found." });
     return null;
   }
-  const course = await Course.findById(feedback.course).select("faculty").lean();
-  if (req.user.role !== "admin" && String(course?.faculty) !== String(req.user._id)) {
+  const course = await Course.findById(feedback.course).select("faculty domain").lean();
+  if (
+    req.user.role !== "admin" &&
+    String(course?.faculty) !== String(req.user._id) &&
+    (!req.user.domain || course?.domain !== req.user.domain)
+  ) {
     res.status(403).json({ success: false, message: "Only this course's faculty can reply." });
     return null;
   }

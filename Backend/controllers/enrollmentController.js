@@ -97,7 +97,10 @@ const getEnrollmentRequests = async (req, res) => {
     const status = ["pending", "approved", "rejected", "all"].includes(req.query.status) ? req.query.status : "pending";
     const scope = {};
     if (req.user.role !== "admin") {
-      scope.course = { $in: (await Course.find({ faculty: req.user._id }).select("_id").lean()).map((c) => c._id) };
+      const courseFilter = req.user.domain
+        ? { $or: [{ faculty: req.user._id }, { domain: req.user.domain }] }
+        : { faculty: req.user._id };
+      scope.course = { $in: (await Course.find(courseFilter).select("_id").lean()).map((c) => c._id) };
     }
 
     const [requests, counts] = await Promise.all([
@@ -139,8 +142,12 @@ const decideEnrollment = async (req, res) => {
     const enrollment = await Enrollment.findById(req.params.id);
     if (!enrollment) return res.status(404).json({ success: false, message: "Enrollment request not found." });
 
-    const course = await Course.findById(enrollment.course).select("faculty").lean();
-    if (req.user.role !== "admin" && String(course?.faculty) !== String(req.user._id)) {
+    const course = await Course.findById(enrollment.course).select("faculty domain").lean();
+    if (
+      req.user.role !== "admin" &&
+      String(course?.faculty) !== String(req.user._id) &&
+      (!req.user.domain || course?.domain !== req.user.domain)
+    ) {
       return res.status(403).json({ success: false, message: "Only this course's faculty can decide this request." });
     }
 

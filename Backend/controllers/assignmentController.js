@@ -10,7 +10,9 @@ const sanitizeAssignment = (assignment) => ({
 });
 
 const canManageCourse = (course, user) =>
-  user.role === "admin" || String(course.faculty) === String(user._id);
+  user.role === "admin" ||
+  String(course.faculty) === String(user._id) ||
+  Boolean(user.domain && course.domain === user.domain);
 
 // Submission entries faculty can see/evaluate, and the outcomes they can set.
 const SUBMITTED_STATUSES = ["Submitted", "Evaluated", "Returned"];
@@ -63,7 +65,7 @@ const createAssignment = async (req, res) => {
       });
     }
 
-    if (String(course.faculty) !== String(facultyId)) {
+    if (!canManageCourse(course, req.user)) {
       return res.status(403).json({
         success: false,
         message: "You can only create assignments for your own courses.",
@@ -246,8 +248,13 @@ const getFacultySubmissions = async (req, res) => {
     const facultyId = user._id;
     const { courseId, assignmentId, status, search } = req.query;
 
-    // Load courses owned by this faculty (or all courses if admin)
-    const courseQuery = user.role === "admin" ? {} : { faculty: facultyId };
+    // Load courses owned by this faculty or matching domain (or all courses if admin)
+    const courseQuery =
+      user.role === "admin"
+        ? {}
+        : user.domain
+        ? { $or: [{ faculty: facultyId }, { domain: user.domain }] }
+        : { faculty: facultyId };
     if (courseId) {
       courseQuery._id = courseId;
     }

@@ -76,7 +76,10 @@ const loadOwnedCourse = async (req, res) => {
 
   // SECURITY: ownership is resolved only from the authenticated JWT
   // user — never trust a facultyId supplied by the client.
-  if (String(course.faculty) !== String(req.user._id)) {
+  const isOwner = String(course.faculty) === String(req.user._id);
+  const isDomainFaculty = Boolean(req.user.domain && course.domain === req.user.domain);
+  const isAdmin = req.user.role === "admin";
+  if (!isAdmin && !isOwner && !isDomainFaculty) {
     res.status(403).json({
       success: false,
       message: "You can only view analytics for your own courses.",

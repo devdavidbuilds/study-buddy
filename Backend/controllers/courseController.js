@@ -453,7 +453,12 @@ const updateCourse = async (req, res) => {
 const getMyFacultyCourses = async (req, res) => {
   try {
     const facultyId = req.user._id;
-    const filters = req.user.role === "admin" ? {} : { faculty: facultyId };
+    const filters =
+      req.user.role === "admin"
+        ? {}
+        : req.user.domain
+        ? { $or: [{ faculty: facultyId }, { domain: req.user.domain }] }
+        : { faculty: facultyId };
 
     // Faculty pages only need course metadata plus module/lesson counts.
     // Sending the module/lesson outlines too made this response ~50 MB for

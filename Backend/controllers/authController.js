@@ -7,6 +7,7 @@ const serializeUser = (user) => ({
   fullName: user.fullName,
   email: user.email,
   role: user.role,
+  domain: user.domain || "",
   profileImage: user.profileImage,
   phone: user.phone,
   dateOfBirth: user.dateOfBirth,

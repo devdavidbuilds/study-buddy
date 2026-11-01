@@ -22,6 +22,7 @@ import Profile from './pages/Profile/Profile';
 import CodeLab from './pages/CodeLab/CodeLab';
 import Notifications from './pages/Notifications/Notifications';
 import FacultyDashboard from './pages/Faculty/FacultyDashboard';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -38,6 +39,12 @@ function App() {
 
             {/* Protected Pages */}
             <Route element={<ProtectedRoute />}>
+              {/* Admin Dashboard */}
+              <Route
+                path="/admin"
+                element={<AdminDashboard />}
+              />
+
               {/* Faculty Dashboard (own layout, no sidebar) */}
               <Route
                 path="/faculty"

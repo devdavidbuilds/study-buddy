@@ -4,6 +4,7 @@ const Course = require("../models/Course");
 const CourseProgress = require("../models/CourseProgress");
 const Certificate = require("../models/Certificate");
 const StudentActivity = require("../models/StudentActivity");
+const Enrollment = require("../models/Enrollment");
 
 // ==============================
 // Faculty "Students" page: every registered student with their
@@ -38,12 +39,34 @@ const statusFor = ({ lastSeenAt, lastActiveAt, lastLoginAt }, now) => {
 const getStudents = async (req, res) => {
   try {
     const now = Date.now();
-    const students = await User.find({ role: "student" }).select(PROFILE_FIELDS).lean();
+    let studentFilter = { role: "student" };
+    let domainCourseIds = null;
+
+    if (req.user.role !== "admin") {
+      const courseFilter = req.user.domain
+        ? { $or: [{ faculty: req.user._id }, { domain: req.user.domain }] }
+        : { faculty: req.user._id };
+      domainCourseIds = (await Course.find(courseFilter).select("_id").lean()).map((c) => c._id);
+
+      const [progressStudents, enrolledStudents] = await Promise.all([
+        CourseProgress.distinct("user", { course: { $in: domainCourseIds } }),
+        Enrollment.distinct("student", { course: { $in: domainCourseIds } }),
+      ]);
+      const relevantStudentIds = [...new Set([...progressStudents, ...enrolledStudents].map(String))];
+      studentFilter._id = { $in: relevantStudentIds };
+    }
+
+    const students = await User.find(studentFilter).select(PROFILE_FIELDS).lean();
     const ids = students.map((s) => s._id);
+
+    const progressMatch = { user: { $in: ids } };
+    if (domainCourseIds) {
+      progressMatch.course = { $in: domainCourseIds };
+    }
 
     const [progressRows, certRows, activityRows] = await Promise.all([
       CourseProgress.aggregate([
-        { $match: { user: { $in: ids } } },
+        { $match: progressMatch },
         {
           $project: {
             user: 1,

@@ -4,6 +4,11 @@ const CourseProgress = require("../models/CourseProgress");
 const recordActivity = require("../utils/recordActivity");
 const { requireApprovedEnrollment } = require("../utils/enrollment");
 
+const canManageCourse = (course, user) =>
+  user.role === "admin" ||
+  String(course?.faculty) === String(user?._id) ||
+  Boolean(user?.domain && course?.domain === user?.domain);
+
 // ==============================
 // Helper: validate a raw questions array from the request body.
 // Returns { valid, message } — never trusts client-supplied totals.
@@ -88,7 +93,7 @@ const createQuiz = async (req, res) => {
       });
     }
 
-    if (String(course.faculty) !== String(facultyId)) {
+    if (!canManageCourse(course, req.user)) {
       return res.status(403).json({
         success: false,
         message: "You can only create quizzes for your own courses.",
@@ -189,7 +194,7 @@ const getQuizzesByCourse = async (req, res) => {
       });
     }
 
-    if (String(course.faculty) !== String(facultyId)) {
+    if (!canManageCourse(course, req.user)) {
       return res.status(403).json({
         success: false,
         message: "You can only view quizzes for your own courses.",
@@ -232,7 +237,7 @@ const getQuizzesForLesson = async (req, res) => {
       });
     }
 
-    if (req.user.role !== "student" && String(course.faculty) !== String(req.user._id)) {
+    if (req.user.role !== "student" && !canManageCourse(course, req.user)) {
       return res.status(403).json({
         success: false,
         message: "You can only view quizzes for your own courses.",
@@ -368,7 +373,22 @@ const getMyQuizzes = async (req, res) => {
   try {
     const facultyId = req.user._id;
 
-    const quizzes = await Quiz.find({ faculty: facultyId })
+    let query = { faculty: facultyId };
+    if (req.user.role === "admin") {
+      query = {};
+    } else if (req.user.domain) {
+      const domainCourseIds = (
+        await Course.find({
+          $or: [{ faculty: facultyId }, { domain: req.user.domain }],
+        })
+          .select("_id")
+          .lean()
+      ).map((c) => c._id);
+      query = {
+        $or: [{ faculty: facultyId }, { course: { $in: domainCourseIds } }],
+      };
+    }
+    const quizzes = await Quiz.find(query)
       .populate("course", "courseName courseCode")
       .sort({ createdAt: -1 })
       .lean();

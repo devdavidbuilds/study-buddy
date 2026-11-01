@@ -66,7 +66,7 @@ const authorizeRoles = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(req.user.role) && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to access this resource.",

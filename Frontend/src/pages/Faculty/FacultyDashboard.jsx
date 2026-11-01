@@ -23,6 +23,7 @@ import {
   FolderOpen,
   UserPlus,
   MessageSquare,
+  ShieldCheck,
 } from 'lucide-react';
 import SakuraPetals from '../../components/ui/SakuraPetals';
 import { profile } from '../../api/authApi';
@@ -124,6 +125,7 @@ export default function FacultyDashboard() {
   const [pendingEnrollments, setPendingEnrollments] = useState(0);
   const [unrepliedFeedback, setUnrepliedFeedback] = useState(0);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [userRole, setUserRole] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -133,6 +135,7 @@ export default function FacultyDashboard() {
         const user = res?.data?.user;
         if (user) {
           setFacultyName(user.fullName || 'Faculty');
+          setUserRole(user.role || '');
 
           getFacultyFeedback({ status: 'unreplied' })
             .then((feedbackRes) => setUnrepliedFeedback(feedbackRes?.data?.data?.summary?.unreplied || 0))
@@ -531,6 +534,30 @@ export default function FacultyDashboard() {
           </div>
 
           <div className="fd-topbar-right">
+            {userRole === 'admin' && (
+              <button
+                type="button"
+                className="fd-admin-pill"
+                onClick={() => navigate('/admin')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  marginRight: '8px',
+                }}
+              >
+                <ShieldCheck size={16} />
+                <span>Admin Console</span>
+              </button>
+            )}
             <ThemeToggle />
             <button className="fd-icon-btn" aria-label="Notifications">
               <Bell size={18} />

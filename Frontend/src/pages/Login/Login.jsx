@@ -8,6 +8,7 @@ import {
   EyeOff,
   GraduationCap,
   BookOpen,
+  ShieldCheck,
 } from 'lucide-react';
 
 import Button from '../../components/ui/Button';
@@ -55,7 +56,15 @@ export default function Login() {
         response?.data?.data?.user?.role ||
         'student';
 
-      if (loginType === 'faculty') {
+      if (loginType === 'admin') {
+        if (userRole !== 'admin') {
+          setError('This account does not have administrator privileges.');
+          return;
+        }
+
+        setAuthToken(token);
+        navigate('/admin');
+      } else if (loginType === 'faculty') {
         if (userRole === 'student') {
           setError(
             'This account is registered as a student. Please use Student Login.'
@@ -64,11 +73,17 @@ export default function Login() {
         }
 
         setAuthToken(token);
-        navigate('/faculty');
+        navigate(userRole === 'admin' ? '/admin' : '/faculty');
       } else {
-        if (userRole === 'faculty' || userRole === 'admin') {
+        if (userRole === 'faculty') {
           setError(
             'This account is registered as faculty. Please use Faculty Login.'
+          );
+          return;
+        }
+        if (userRole === 'admin') {
+          setError(
+            'This account has administrator privileges. Please use Admin Login.'
           );
           return;
         }
@@ -121,7 +136,7 @@ export default function Login() {
 
             <p>
               Sign in to continue your{' '}
-              {loginType === 'faculty' ? 'teaching' : 'learning'}{' '}
+              {loginType === 'admin' ? 'administration' : loginType === 'faculty' ? 'teaching' : 'learning'}{' '}
               journey
             </p>
           </div>
@@ -153,6 +168,20 @@ export default function Login() {
             >
               <BookOpen size={18} />
               Faculty
+            </button>
+
+            <button
+              type="button"
+              className={`login-type-btn ${
+                loginType === 'admin' ? 'active' : ''
+              }`}
+              onClick={() => {
+                setLoginType('admin');
+                setError('');
+              }}
+            >
+              <ShieldCheck size={18} />
+              Admin
             </button>
           </div>
 

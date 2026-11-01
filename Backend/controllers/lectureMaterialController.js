@@ -19,11 +19,13 @@ const {
 // ==============================
 
 const canManageCourse = (course, user) =>
-  user.role === "admin" || String(course.faculty) === String(user._id);
+  user.role === "admin" ||
+  String(course?.faculty) === String(user?._id) ||
+  Boolean(user?.domain && course?.domain === user?.domain);
 
 const canViewCourseMaterials = (course, user) => user.role === "student" || canManageCourse(course, user);
 
-const COURSE_FIELDS = "faculty courseName courseCode modules.id modules.title";
+const COURSE_FIELDS = "faculty courseName courseCode domain modules.id modules.title";
 
 const validateText = ({ title, description }, { requireTitle }) => {
   if (title !== undefined || requireTitle) {
