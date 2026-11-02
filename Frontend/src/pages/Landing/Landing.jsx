@@ -19,6 +19,7 @@ import {
 
 import { useEffect, useState } from 'react';
 import { getCourses } from '../../api/courseApi';
+import { courses as fallbackCourses } from '../../data/mockData';
 import { generateInitials } from '../../utils/helpers';
 import GlassCard from '../../components/ui/GlassCard';
 import SakuraPetals from '../../components/ui/SakuraPetals';
@@ -47,12 +48,13 @@ const staggerContainer = {
 };
 
 export default function Landing() {
-  const [courses, setCourses] = useState([]);
+  const [courses, setCourses] = useState(() => fallbackCourses.slice(0, 4));
   useEffect(() => {
     const loadCourses = async () => {
       try {
         const res = await getCourses();
-        setCourses(Array.isArray(res?.data?.data) ? res.data.data : []);
+        const items = Array.isArray(res?.data?.data) ? res.data.data : [];
+        if (items.length > 0) setCourses(items);
       } catch {
         setCourses([]);
       }

@@ -10,13 +10,23 @@ export const API_ORIGIN = (
 
 const API = axios.create({
   baseURL: `${API_ORIGIN}/api`,
+  timeout: 60000,
 });
+
+// Pre-warm the backend immediately upon frontend load to eliminate cold-start wait
+if (typeof window !== 'undefined' && !import.meta.env.DEV) {
+  try {
+    fetch(`${API_ORIGIN}/`, { method: 'GET', mode: 'no-cors' }).catch(() => {});
+  } catch {
+    // Ignore pre-warm failure
+  }
+}
 
 // Message for a request that never got a response (server down/unreachable).
 export const unreachableMessage = () =>
   import.meta.env.DEV && API_ORIGIN.includes('localhost')
     ? `Cannot reach the backend at ${API_ORIGIN}. Start it with "npm run dev" in the Backend folder, then try again.`
-    : 'Cannot reach the server right now. Please check your connection and try again in a moment.';
+    : 'Cannot reach the server right now. The server may be waking up from sleep. Please wait a few seconds and try again.';
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('studyBuddyToken');

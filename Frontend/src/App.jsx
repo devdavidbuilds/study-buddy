@@ -1,135 +1,139 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
-
-import Landing from './pages/Landing/Landing';
-import Login from './pages/Login/Login';
-import Signup from './pages/signup/signup';
-
-import AppLayout from './components/layout/AppLayout';
-import Workspace from './pages/Workspace/Workspace';
-import Courses from './pages/Courses/Courses';
-import CourseDetail from './pages/Courses/CourseDetail';
-import CourseLearn from './pages/Courses/CourseLearn';
-import Planner from './pages/Planner/Planner';
-import Assignments from './pages/Assignments/Assignments';
-import AITutor from './pages/AITutor/AITutor';
-import Notes from './pages/Notes/Notes';
-import Achievements from './pages/Achievements/Achievements';
-import Progress from './pages/Progress/Progress';
-import Settings from './pages/Settings/Settings';
-import Profile from './pages/Profile/Profile';
-import CodeLab from './pages/CodeLab/CodeLab';
-import Notifications from './pages/Notifications/Notifications';
-import FacultyDashboard from './pages/Faculty/FacultyDashboard';
-import AdminDashboard from './pages/Admin/AdminDashboard';
-
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import PageLoader from './components/ui/PageLoader';
+
+// Lazy-loaded pages to split bundle size and optimize initial load
+const Landing = lazy(() => import('./pages/Landing/Landing'));
+const Login = lazy(() => import('./pages/Login/Login'));
+const Signup = lazy(() => import('./pages/signup/signup'));
+
+const AppLayout = lazy(() => import('./components/layout/AppLayout'));
+const Workspace = lazy(() => import('./pages/Workspace/Workspace'));
+const Courses = lazy(() => import('./pages/Courses/Courses'));
+const CourseDetail = lazy(() => import('./pages/Courses/CourseDetail'));
+const CourseLearn = lazy(() => import('./pages/Courses/CourseLearn'));
+const Planner = lazy(() => import('./pages/Planner/Planner'));
+const Assignments = lazy(() => import('./pages/Assignments/Assignments'));
+const AITutor = lazy(() => import('./pages/AITutor/AITutor'));
+const Notes = lazy(() => import('./pages/Notes/Notes'));
+const Achievements = lazy(() => import('./pages/Achievements/Achievements'));
+const Progress = lazy(() => import('./pages/Progress/Progress'));
+const Settings = lazy(() => import('./pages/Settings/Settings'));
+const Profile = lazy(() => import('./pages/Profile/Profile'));
+const CodeLab = lazy(() => import('./pages/CodeLab/CodeLab'));
+const Notifications = lazy(() => import('./pages/Notifications/Notifications'));
+const FacultyDashboard = lazy(() => import('./pages/Faculty/FacultyDashboard'));
+const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
 
 function App() {
   return (
     <ThemeProvider>
       <NotificationProvider>
         <BrowserRouter>
-          <Routes>
-            {/* Public Pages */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public Pages */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
 
-            {/* Protected Pages */}
-            <Route element={<ProtectedRoute />}>
-              {/* Admin Dashboard */}
-              <Route
-                path="/admin"
-                element={<AdminDashboard />}
-              />
-
-              {/* Faculty Dashboard (own layout, no sidebar) */}
-              <Route
-                path="/faculty"
-                element={<FacultyDashboard />}
-              />
-
-              {/* Student Pages (with AppLayout sidebar) */}
-              <Route element={<AppLayout />}>
+              {/* Protected Pages */}
+              <Route element={<ProtectedRoute />}>
+                {/* Admin Dashboard */}
                 <Route
-                  path="/workspace"
-                  element={<Workspace />}
+                  path="/admin"
+                  element={<AdminDashboard />}
                 />
 
+                {/* Faculty Dashboard (own layout, no sidebar) */}
                 <Route
-                  path="/courses"
-                  element={<Courses />}
+                  path="/faculty"
+                  element={<FacultyDashboard />}
                 />
 
-                <Route
-                  path="/courses/:id"
-                  element={<CourseDetail />}
-                />
+                {/* Student Pages (with AppLayout sidebar) */}
+                <Route element={<AppLayout />}>
+                  <Route
+                    path="/workspace"
+                    element={<Workspace />}
+                  />
 
-                <Route
-                  path="/courses/:id/learn"
-                  element={<CourseLearn />}
-                />
+                  <Route
+                    path="/courses"
+                    element={<Courses />}
+                  />
 
-                <Route
-                  path="/courses/:id/learn/:moduleId/:lessonId"
-                  element={<CourseLearn />}
-                />
+                  <Route
+                    path="/courses/:id"
+                    element={<CourseDetail />}
+                  />
 
-                <Route
-                  path="/planner"
-                  element={<Planner />}
-                />
+                  <Route
+                    path="/courses/:id/learn"
+                    element={<CourseLearn />}
+                  />
 
-                <Route
-                  path="/assignments"
-                  element={<Assignments />}
-                />
+                  <Route
+                    path="/courses/:id/learn/:moduleId/:lessonId"
+                    element={<CourseLearn />}
+                  />
 
-                <Route
-                  path="/ai-tutor"
-                  element={<AITutor />}
-                />
+                  <Route
+                    path="/planner"
+                    element={<Planner />}
+                  />
 
-                <Route
-                  path="/notes"
-                  element={<Notes />}
-                />
+                  <Route
+                    path="/assignments"
+                    element={<Assignments />}
+                  />
 
-                <Route
-                  path="/achievements"
-                  element={<Achievements />}
-                />
+                  <Route
+                    path="/ai-tutor"
+                    element={<AITutor />}
+                  />
 
-                <Route
-                  path="/progress"
-                  element={<Progress />}
-                />
+                  <Route
+                    path="/notes"
+                    element={<Notes />}
+                  />
 
-                <Route
-                  path="/notifications"
-                  element={<Notifications />}
-                />
+                  <Route
+                    path="/achievements"
+                    element={<Achievements />}
+                  />
 
-                <Route
-                  path="/settings"
-                  element={<Settings />}
-                />
+                  <Route
+                    path="/progress"
+                    element={<Progress />}
+                  />
 
-                <Route
-                  path="/profile"
-                  element={<Profile />}
-                />
+                  <Route
+                    path="/notifications"
+                    element={<Notifications />}
+                  />
 
-                <Route
-                  path="/code-lab"
-                  element={<CodeLab />}
-                />
+                  <Route
+                    path="/settings"
+                    element={<Settings />}
+                  />
+
+                  <Route
+                    path="/profile"
+                    element={<Profile />}
+                  />
+
+                  <Route
+                    path="/code-lab"
+                    element={<CodeLab />}
+                  />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </NotificationProvider>
     </ThemeProvider>
