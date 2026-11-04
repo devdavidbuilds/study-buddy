@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
+  Megaphone,
+  Pin,
+  Trash2,
+  Send,
+  Radio,
+  Bell,
   Users,
   GraduationCap,
   BookOpen,
@@ -40,6 +46,10 @@ import {
   createFaculty,
   getAdminStudents,
   getAdminCourseRatings,
+  createAnnouncement,
+  getAnnouncements,
+  deleteAnnouncement,
+  togglePinAnnouncement,
 } from '../../api/adminApi';
 import './AdminDashboard.css';
 
@@ -96,6 +106,23 @@ export default function AdminDashboard() {
   const [studentSearch, setStudentSearch] = useState('');
   const [progressViewMode, setProgressViewMode] = useState('students'); // 'students' | 'teachers'
 
+  // Global Announcements state
+  const [announcementsList, setAnnouncementsList] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [announcementTargetFilter, setAnnouncementTargetFilter] = useState('all');
+  const [publishingAnnouncement, setPublishingAnnouncement] = useState(false);
+  const [deletingAnnouncementId, setDeletingAnnouncementId] = useState(null);
+  const [announcementError, setAnnouncementError] = useState('');
+  const [announcementSuccess, setAnnouncementSuccess] = useState('');
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    message: '',
+    target: 'all',
+    type: 'info',
+    category: 'platform',
+    isPinned: false,
+  });
+
   // Course ratings state
   const [courseRatings, setCourseRatings] = useState(null);
   const [loadingRatings, setLoadingRatings] = useState(false);
@@ -117,8 +144,86 @@ export default function AdminDashboard() {
       if (!facultyList.length) loadFacultyData();
     } else if (activeTab === 'ratings') {
       loadRatingsData();
+    } else if (activeTab === 'announcements') {
+      loadAnnouncements();
     }
   }, [activeTab]);
+
+
+  const loadAnnouncements = async () => {
+    setLoadingAnnouncements(true);
+    try {
+      const res = await getAnnouncements();
+      if (res?.data?.success) {
+        setAnnouncementsList(res.data.data || []);
+      }
+    } catch (err) {
+      console.warn('Failed to load announcements:', err?.message);
+    } finally {
+      setLoadingAnnouncements(false);
+    }
+  };
+
+  const handleCreateAnnouncement = async (e) => {
+    e.preventDefault();
+    setAnnouncementError('');
+    setAnnouncementSuccess('');
+    setPublishingAnnouncement(true);
+
+    try {
+      const res = await createAnnouncement(announcementForm);
+      if (res?.data?.success) {
+        setAnnouncementSuccess('Announcement broadcast successfully!');
+        setAnnouncementForm({
+          title: '',
+          message: '',
+          target: 'all',
+          type: 'info',
+          category: 'platform',
+          isPinned: false,
+        });
+        loadAnnouncements();
+        setTimeout(() => setAnnouncementSuccess(''), 4000);
+      }
+    } catch (err) {
+      setAnnouncementError(err?.response?.data?.message || 'Failed to broadcast announcement.');
+    } finally {
+      setPublishingAnnouncement(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this announcement?')) return;
+    setDeletingAnnouncementId(id);
+    try {
+      const res = await deleteAnnouncement(id);
+      if (res?.data?.success) {
+        setAnnouncementsList((prev) => prev.filter((a) => a._id !== id));
+      }
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to delete announcement.');
+    } finally {
+      setDeletingAnnouncementId(null);
+    }
+  };
+
+  const handleTogglePin = async (id) => {
+    try {
+      const res = await togglePinAnnouncement(id);
+      if (res?.data?.success) {
+        setAnnouncementsList((prev) =>
+          prev.map((a) => (a._id === id ? { ...a, isPinned: !a.isPinned } : a)).sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to toggle pin:', err);
+    }
+  };
+
+  const filteredAnnouncements = announcementsList.filter((a) => {
+    if (announcementTargetFilter === 'all') return true;
+    return a.target === announcementTargetFilter;
+  });
 
   const loadOverviewData = async () => {
     setLoadingOverview(true);
@@ -453,6 +558,17 @@ export default function AdminDashboard() {
           <Sparkles size={18} />
           <span>Super-Faculty Access</span>
         </button>
+        <button
+          type="button"
+          className={`admin-nav-tab ${activeTab === 'announcements' ? 'active' : ''}`}
+          onClick={() => setActiveTab('announcements')}
+        >
+          <Megaphone size={18} />
+          <span>Global Announcements</span>
+          {announcementsList.length > 0 && (
+            <span className="admin-tab-counter">{announcementsList.length}</span>
+          )}
+        </button>
       </nav>
 
       {/* Main Content Area */}
@@ -522,6 +638,18 @@ export default function AdminDashboard() {
                       <span className="stat-hint">
                         {overview?.summary?.totalReviews || 0} verified course reviews
                       </span>
+                    </div>
+                  </div>
+                  <div className="admin-stat-card stat-broadcasts" onClick={() => setActiveTab('announcements')} style={{ cursor: 'pointer' }}>
+                    <div className="stat-icon-wrapper" style={{ background: 'rgba(231, 84, 128, 0.15)', color: '#e75480' }}>
+                      <Megaphone size={24} />
+                    </div>
+                    <div className="stat-content">
+                      <span className="stat-label">Announcements</span>
+                      <strong className="stat-value">
+                        {announcementsList.length}
+                      </strong>
+                      <span className="stat-hint">Broadcast to campus →</span>
                     </div>
                   </div>
                 </div>
@@ -1217,6 +1345,273 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+        {/* TAB 6: GLOBAL ANNOUNCEMENTS */}
+        {activeTab === 'announcements' && (
+          <div className="admin-tab-pane">
+            <div className="admin-section-header">
+              <div>
+                <h2 className="admin-section-title">
+                  <Megaphone size={20} className="admin-title-icon" />
+                  Global Announcements & Notifications
+                </h2>
+                <p className="admin-section-subtitle">
+                  Broadcast instant notices, academic alerts, and platform updates directly to students, teachers, or all users across the institution.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="admin-secondary-btn"
+                onClick={loadAnnouncements}
+                disabled={loadingAnnouncements}
+              >
+                <RefreshCw size={15} className={loadingAnnouncements ? 'spin' : ''} />
+                <span>Refresh Feed</span>
+              </button>
+            </div>
+
+            <div className="admin-announcements-layout">
+              {/* Form Column */}
+              <div className="admin-announcements-composer">
+                <div className="admin-composer-header">
+                  <Radio size={20} className="composer-icon" />
+                  <div>
+                    <h3>Publish Announcement</h3>
+                    <p>Send a notification to students, faculty, or both</p>
+                  </div>
+                </div>
+
+                {announcementError && (
+                  <div className="admin-form-alert error">
+                    <AlertCircle size={16} />
+                    <span>{announcementError}</span>
+                  </div>
+                )}
+
+                {announcementSuccess && (
+                  <div className="admin-form-alert success">
+                    <CheckCircle2 size={16} />
+                    <span>{announcementSuccess}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateAnnouncement} className="admin-announcement-form">
+                  <div className="admin-field-group">
+                    <label className="admin-field-label">Target Audience *</label>
+                    <div className="admin-target-selector">
+                      <button
+                        type="button"
+                        className={`admin-target-btn ${announcementForm.target === 'all' ? 'active' : ''}`}
+                        onClick={() => setAnnouncementForm((prev) => ({ ...prev, target: 'all' }))}
+                      >
+                        <Users size={16} />
+                        <div>
+                          <strong>All Users</strong>
+                          <span>Students & Faculty</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`admin-target-btn ${announcementForm.target === 'students' ? 'active' : ''}`}
+                        onClick={() => setAnnouncementForm((prev) => ({ ...prev, target: 'students' }))}
+                      >
+                        <BookOpen size={16} />
+                        <div>
+                          <strong>Students Only</strong>
+                          <span>All enrolled learners</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`admin-target-btn ${announcementForm.target === 'faculty' ? 'active' : ''}`}
+                        onClick={() => setAnnouncementForm((prev) => ({ ...prev, target: 'faculty' }))}
+                      >
+                        <GraduationCap size={16} />
+                        <div>
+                          <strong>Faculty Only</strong>
+                          <span>Instructors & Staff</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="admin-field-group">
+                    <label className="admin-field-label">Announcement Title *</label>
+                    <input
+                      type="text"
+                      className="admin-input-field"
+                      placeholder="e.g. Platform Update: New CodeLab Sandbox Released"
+                      value={announcementForm.title}
+                      onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, title: e.target.value }))}
+                      maxLength={200}
+                      required
+                    />
+                  </div>
+
+                  <div className="admin-form-row-2">
+                    <div className="admin-field-group">
+                      <label className="admin-field-label">Notice Type / Tone</label>
+                      <select
+                        className="admin-select-field"
+                        value={announcementForm.type}
+                        onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, type: e.target.value }))}
+                      >
+                        <option value="info">ℹ️ General Info</option>
+                        <option value="warning">⚠️ Platform Update</option>
+                        <option value="urgent">🚨 Urgent Notice</option>
+                        <option value="success">✅ Milestone / Event</option>
+                      </select>
+                    </div>
+
+                    <div className="admin-field-group">
+                      <label className="admin-field-label">Category</label>
+                      <select
+                        className="admin-select-field"
+                        value={announcementForm.category}
+                        onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, category: e.target.value }))}
+                      >
+                        <option value="platform">Platform Update</option>
+                        <option value="academic">Academic / Exams</option>
+                        <option value="event">Campus Event</option>
+                        <option value="general">General Notice</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="admin-field-group">
+                    <div className="admin-field-header-row">
+                      <label className="admin-field-label">Announcement Message *</label>
+                      <span className="admin-char-count">{announcementForm.message.length}/3000</span>
+                    </div>
+                    <textarea
+                      className="admin-textarea-field"
+                      rows={4}
+                      placeholder="Write the full announcement message, details, and action items..."
+                      value={announcementForm.message}
+                      onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, message: e.target.value }))}
+                      maxLength={3000}
+                      required
+                    />
+                  </div>
+
+                  <label className="admin-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={announcementForm.isPinned}
+                      onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, isPinned: e.target.checked }))}
+                    />
+                    <span>📌 Pin this announcement to top of recipient notifications</span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="admin-primary-btn full-width"
+                    disabled={publishingAnnouncement}
+                  >
+                    {publishingAnnouncement ? (
+                      <>
+                        <RefreshCw size={16} className="spin" />
+                        <span>Broadcasting Announcement…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        <span>Broadcast Announcement</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+
+              {/* Feed Column */}
+              <div className="admin-announcements-feed">
+                <div className="feed-header-row">
+                  <div>
+                    <h3>Published Announcements</h3>
+                    <p>{announcementsList.length} total announcement{announcementsList.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="feed-filter-group">
+                    <select
+                      className="admin-select-field admin-select-sm"
+                      value={announcementTargetFilter}
+                      onChange={(e) => setAnnouncementTargetFilter(e.target.value)}
+                    >
+                      <option value="all">All Targets</option>
+                      <option value="all">Both Students & Faculty</option>
+                      <option value="students">Students Only</option>
+                      <option value="faculty">Faculty Only</option>
+                    </select>
+                  </div>
+                </div>
+
+                {loadingAnnouncements ? (
+                  <div className="admin-loading-state">
+                    <RefreshCw size={24} className="spin" />
+                    <p>Loading announcements feed…</p>
+                  </div>
+                ) : filteredAnnouncements.length === 0 ? (
+                  <div className="admin-empty-feed">
+                    <Megaphone size={40} className="empty-feed-icon" />
+                    <h4>No announcements published yet</h4>
+                    <p>Use the form on the left to broadcast announcements to students, faculty, or the entire campus.</p>
+                  </div>
+                ) : (
+                  <div className="admin-announcements-list">
+                    {filteredAnnouncements.map((item) => (
+                      <div key={item._id} className={`admin-announcement-card type-${item.type} ${item.isPinned ? 'is-pinned' : ''}`}>
+                        <div className="card-top-row">
+                          <div className="card-badge-group">
+                            {item.isPinned && (
+                              <span className="ann-badge badge-pinned">
+                                <Pin size={11} /> Pinned
+                              </span>
+                            )}
+                            <span className={`ann-badge badge-type-${item.type}`}>
+                              {item.type.toUpperCase()}
+                            </span>
+                            <span className="ann-badge badge-target">
+                              {item.target === 'all' ? '👥 Students & Faculty' : item.target === 'students' ? '🎓 Students Only' : '👨‍🏫 Faculty Only'}
+                            </span>
+                            <span className="ann-badge badge-category">{item.category}</span>
+                          </div>
+                          <div className="card-action-group">
+                            <button
+                              type="button"
+                              className={`card-icon-btn ${item.isPinned ? 'pinned-active' : ''}`}
+                              onClick={() => handleTogglePin(item._id)}
+                              title={item.isPinned ? 'Unpin announcement' : 'Pin to top'}
+                            >
+                              <Pin size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              className="card-icon-btn delete-btn"
+                              onClick={() => handleDeleteAnnouncement(item._id)}
+                              disabled={deletingAnnouncementId === item._id}
+                              title="Delete announcement"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <h4 className="ann-card-title">{item.title}</h4>
+                        <p className="ann-card-message">{item.message}</p>
+
+                        <div className="ann-card-footer">
+                          <span className="ann-sender">Broadcasted by {item.senderName || 'Admin'}</span>
+                          <span className="ann-date">
+                            <Clock size={12} /> {new Date(item.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* ============================================================== */}

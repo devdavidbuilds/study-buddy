@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell,
+  Megaphone,
   CheckCheck,
   CheckCircle2,
   FileText,
@@ -21,6 +22,7 @@ import './Notifications.css';
 const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'unread', label: 'Unread' },
+  { key: 'announcement', label: 'Announcements' },
   { key: 'enrollment', label: 'Enrollments' },
   { key: 'assignment', label: 'Assignments' },
   { key: 'material', label: 'Lecture Materials' },
@@ -59,6 +61,8 @@ export default function Notifications() {
 
   const getCategoryIcon = (category) => {
     switch (category) {
+      case 'announcement':
+        return <Megaphone size={20} />;
       case 'enrollment':
         return <CheckCircle2 size={20} />;
       case 'material':

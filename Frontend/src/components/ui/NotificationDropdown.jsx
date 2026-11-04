@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Bell,
+  Megaphone,
   CheckCheck,
   CheckCircle2,
   FileText,
@@ -67,6 +68,8 @@ export default function NotificationDropdown({ className = '' }) {
 
   const getCategoryIcon = (category) => {
     switch (category) {
+      case 'announcement':
+        return <Megaphone size={16} />;
       case 'enrollment':
         return <CheckCircle2 size={16} />;
       case 'material':

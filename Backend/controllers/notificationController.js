@@ -4,6 +4,7 @@ const CourseFeedback = require("../models/CourseFeedback");
 const LectureMaterial = require("../models/LectureMaterial");
 const Assignment = require("../models/Assignment");
 const Certificate = require("../models/Certificate");
+const Announcement = require("../models/Announcement");
 
 const DAY = 24 * 60 * 60 * 1000;
 const LOOKBACK_DAYS = 30;
@@ -165,7 +166,40 @@ const getNotifications = async (req, res) => {
       });
     }
 
-    items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // Admin Global Announcements targeted to this user
+    const userRole = req.user.role || "student";
+    const targetRoles = ["all"];
+    if (userRole === "faculty" || userRole === "admin") {
+      targetRoles.push("faculty");
+    } else {
+      targetRoles.push("students");
+    }
+
+    const announcements = await Announcement.find({
+      target: { $in: targetRoles },
+      createdAt: { $gte: since },
+      $or: [{ expiresAt: null }, { expiresAt: { $gte: now } }],
+    })
+      .sort({ isPinned: -1, createdAt: -1 })
+      .lean();
+
+    for (const ann of announcements) {
+      items.push({
+        id: `announcement-${ann._id}`,
+        category: "announcement",
+        type: ann.type || "info",
+        title: ann.title,
+        message: ann.message,
+        link: userRole === "faculty" ? "/faculty" : "/notifications",
+        timestamp: ann.createdAt,
+        isPinned: ann.isPinned,
+        sender: ann.senderName || "Platform Administration",
+        target: ann.target,
+      });
+    }
+
+    items.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || new Date(b.timestamp) - new Date(a.timestamp));
     res.status(200).json({ success: true, count: Math.min(items.length, MAX_ITEMS), data: items.slice(0, MAX_ITEMS) });
   } catch (error) {
     console.error("Get Notifications Error:", error.message);

@@ -7,6 +7,7 @@ const CourseProgress = require("../models/CourseProgress");
 const Enrollment = require("../models/Enrollment");
 const CourseFeedback = require("../models/CourseFeedback");
 const StudentActivity = require("../models/StudentActivity");
+const Announcement = require("../models/Announcement");
 const { DOMAIN_DEFINITIONS } = require("../utils/domainHelper");
 
 const VALID_DOMAINS = DOMAIN_DEFINITIONS.map((d) => d.id);
@@ -497,10 +498,163 @@ const getCourseRatings = async (req, res) => {
   }
 };
 
+
+// ==============================
+// Admin: POST /api/admin/announcements
+// Publish a global announcement
+// ==============================
+const createAnnouncement = async (req, res) => {
+  try {
+    const { title, message, target = "all", type = "info", category = "platform", isPinned = false } = req.body;
+
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Announcement title is required.",
+      });
+    }
+
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Announcement message is required.",
+      });
+    }
+
+    const validTargets = ["all", "students", "faculty"];
+    const validTypes = ["info", "warning", "success", "urgent"];
+    const validCategories = ["platform", "academic", "event", "general"];
+
+    const announcement = await Announcement.create({
+      title: String(title).trim(),
+      message: String(message).trim(),
+      target: validTargets.includes(target) ? target : "all",
+      type: validTypes.includes(type) ? type : "info",
+      category: validCategories.includes(category) ? category : "platform",
+      sender: req.user?._id,
+      senderName: req.user?.fullName || "Study Buddy Administrator",
+      isPinned: Boolean(isPinned),
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Announcement published successfully.",
+      data: announcement,
+    });
+  } catch (error) {
+    console.error("Create Announcement Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to publish announcement.",
+    });
+  }
+};
+
+// ==============================
+// Admin: GET /api/admin/announcements
+// List all announcements with filters
+// ==============================
+const getAnnouncements = async (req, res) => {
+  try {
+    const { target, category } = req.query;
+    const filter = {};
+
+    if (target && target !== "all") {
+      filter.target = target;
+    }
+    if (category && category !== "all") {
+      filter.category = category;
+    }
+
+    const announcements = await Announcement.find(filter)
+      .sort({ isPinned: -1, createdAt: -1 })
+      .populate("sender", "fullName email role")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      count: announcements.length,
+      data: announcements,
+    });
+  } catch (error) {
+    console.error("Get Announcements Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load announcements.",
+    });
+  }
+};
+
+// ==============================
+// Admin: DELETE /api/admin/announcements/:id
+// Delete an announcement
+// ==============================
+const deleteAnnouncement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const announcement = await Announcement.findByIdAndDelete(id);
+
+    if (!announcement) {
+      return res.status(404).json({
+        success: false,
+        message: "Announcement not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Announcement deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Delete Announcement Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to delete announcement.",
+    });
+  }
+};
+
+// ==============================
+// Admin: PATCH /api/admin/announcements/:id/pin
+// Toggle pin status
+// ==============================
+const togglePinAnnouncement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const announcement = await Announcement.findById(id);
+
+    if (!announcement) {
+      return res.status(404).json({
+        success: false,
+        message: "Announcement not found.",
+      });
+    }
+
+    announcement.isPinned = !announcement.isPinned;
+    await announcement.save();
+
+    return res.status(200).json({
+      success: true,
+      message: announcement.isPinned ? "Announcement pinned to top." : "Announcement unpinned.",
+      data: announcement,
+    });
+  } catch (error) {
+    console.error("Toggle Pin Announcement Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update announcement pin status.",
+    });
+  }
+};
+
 module.exports = {
   createFaculty,
   getAdminOverview,
   getFacultyList,
   getStudentProgressList,
   getCourseRatings,
+  createAnnouncement,
+  getAnnouncements,
+  deleteAnnouncement,
+  togglePinAnnouncement,
 };
