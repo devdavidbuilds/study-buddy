@@ -18,6 +18,8 @@ import {
   Lock,
   Hourglass,
   Send,
+  HelpCircle,
+  Plus,
 } from 'lucide-react';
 
 import GlassCard from '../../components/ui/GlassCard';
@@ -33,6 +35,8 @@ import { getCourseProgress } from '../../api/progressApi';
 import { logCourseOpened } from '../../api/activityApi';
 import { getMyEnrollment, requestEnrollment, cancelEnrollmentRequest } from '../../api/enrollmentApi';
 import { getLessonMinutes, formatMinutes } from '../../utils/lessonAssignment';
+import AskDoubtModal from '../../components/doubt/AskDoubtModal';
+import { getCourseDoubts } from '../../api/doubtApi';
 import { generateInitials, getLevelColor } from '../../utils/helpers';
 
 const tabs = [
@@ -41,7 +45,7 @@ const tabs = [
   { id: 'resources', label: 'Lecture Materials', icon: FileText },
   { id: 'reading', label: 'Reading List', icon: BookOpen },
   { id: 'feedback', label: 'Feedback', icon: Star },
-  { id: 'discussion', label: 'Discussion', icon: MessageCircle },
+  { id: 'discussion', label: 'Discussion & Doubts', icon: MessageCircle },
 ];
 
 export default function CourseDetail() {
@@ -56,6 +60,16 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [studentProgress, setStudentProgress] = useState(null);
+  const [courseDoubts, setCourseDoubts] = useState([]);
+  const [showDoubtModal, setShowDoubtModal] = useState(false);
+
+  useEffect(() => {
+    if (id && activeTab === 'discussion') {
+      getCourseDoubts(id)
+        .then((res) => setCourseDoubts(res?.data?.data || []))
+        .catch(() => setCourseDoubts([]));
+    }
+  }, [id, activeTab]);
 
   // 'full' = enrolled (or faculty/admin); 'preview' = outline only until
   // the student's enrollment request is approved by faculty.
@@ -1152,80 +1166,152 @@ export default function CourseDetail() {
             </GlassCard>
           )}
 
-          {/* Discussion */}
+          {/* Discussion & Doubts */}
           {activeTab === 'discussion' && (
-            <GlassCard>
-
-              {(course.discussion ?? []).map(
-                (post, index) => (
-                  <div
-                    key={
-                      post?.id ||
-                      `post-${index}`
-                    }
-                    className="discussion-item"
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <GlassCard>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+                  <div>
+                    <h3 className="section-title" style={{ margin: 0 }}>Course Doubts & Discussion</h3>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                      Ask the instructor questions about this course or read answers to other students' doubts.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => setShowDoubtModal(true)}
                   >
+                    <Plus size={15} />
+                    Ask Faculty a Doubt
+                  </button>
+                </div>
 
-                    <div
-                      className="avatar sm"
-                      style={{
-                        background:
-                          post?.avatarColor ||
-                          courseColor,
-                      }}
-                    >
-                      {generateInitials(
-                        post?.name ||
-                          'Student'
-                      )}
-                    </div>
-
-                    <div className="discussion-item-body">
-
-                      <div>
-
-                        <span
+                {/* Course Doubts List */}
+                {courseDoubts.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                    {courseDoubts.map((doubt) => {
+                      const isAnswered = doubt.status === 'resolved';
+                      return (
+                        <div
+                          key={doubt._id}
                           style={{
-                            fontWeight: 600,
-                            fontSize:
-                              'var(--font-size-sm)',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            borderLeft: isAnswered ? '4px solid #10b981' : '4px solid #f59e0b',
+                            borderRadius: 'var(--radius-lg)',
+                            padding: 'var(--space-4)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 'var(--space-3)',
                           }}
                         >
-                          {post?.name ||
-                            'Student'}
-                        </span>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                              <div
+                                className="avatar sm"
+                                style={{
+                                  background: 'var(--gradient-accent)',
+                                  color: '#fff',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {generateInitials(doubt.student?.fullName || 'Student')}
+                              </div>
+                              <div>
+                                <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)' }}>
+                                  {doubt.student?.fullName || 'Student'}
+                                </span>
+                                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-tertiary)', marginLeft: '8px' }}>
+                                  {new Date(doubt.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 10px',
+                                borderRadius: 'var(--radius-full)',
+                                fontSize: 'var(--font-size-xs)',
+                                fontWeight: 600,
+                                background: isAnswered ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                                color: isAnswered ? '#059669' : '#d97706',
+                              }}
+                            >
+                              {isAnswered ? (
+                                <>
+                                  <CheckCircle2 size={12} /> Answered by Faculty
+                                </>
+                              ) : (
+                                <>
+                                  <Clock size={12} /> Pending Faculty Reply
+                                </>
+                              )}
+                            </span>
+                          </div>
 
-                        <span>
-                          {post?.time || ''}
-                        </span>
+                          <div>
+                            <h4 style={{ fontSize: 'var(--font-size-base)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                              {doubt.title}
+                            </h4>
+                            {doubt.lessonTitle && (
+                              <span style={{ fontSize: '11px', color: 'var(--color-accent)', background: 'rgba(99, 102, 241, 0.08)', padding: '2px 8px', borderRadius: '4px', display: 'inline-block', marginBottom: '6px' }}>
+                                Lesson: {doubt.lessonTitle}
+                              </span>
+                            )}
+                            <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                              {doubt.question}
+                            </p>
+                          </div>
 
-                      </div>
-
-                      <p>
-                        {post?.message || ''}
-                      </p>
-
-                    </div>
-
+                          {/* Faculty Answer */}
+                          {doubt.reply?.text && (
+                            <div
+                              style={{
+                                background: 'rgba(16, 185, 129, 0.06)',
+                                border: '1px solid rgba(16, 185, 129, 0.25)',
+                                borderRadius: 'var(--radius-md)',
+                                padding: 'var(--space-3) var(--space-4)',
+                                marginTop: 'var(--space-1)',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: '#059669', marginBottom: '4px' }}>
+                                <CheckCircle2 size={14} /> Instructor Answer ({doubt.reply?.repliedBy?.fullName || 'Faculty'})
+                              </div>
+                              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
+                                {doubt.reply.text}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                )
-              )}
-
-              {(!course.discussion ||
-                course.discussion.length === 0) && (
-                <div
-                  style={{
-                    padding: 'var(--space-6)',
-                    textAlign: 'center',
-                    color:
-                      'var(--text-tertiary)',
-                  }}
-                >
-                  No discussions yet.
-                </div>
-              )}
-
-            </GlassCard>
+                ) : (
+                  <div
+                    style={{
+                      padding: 'var(--space-8) var(--space-4)',
+                      textAlign: 'center',
+                      color: 'var(--text-tertiary)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 'var(--space-2)',
+                    }}
+                  >
+                    <HelpCircle size={32} style={{ color: 'var(--text-tertiary)' }} />
+                    <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      No doubts or questions asked yet
+                    </p>
+                    <p style={{ margin: 0, fontSize: 'var(--font-size-xs)' }}>
+                      Have a doubt or concept question about this course? Click above to ask the instructor directly!
+                    </p>
+                  </div>
+                )}
+              </GlassCard>
+            </div>
           )}
 
         </div>
@@ -1467,6 +1553,15 @@ export default function CourseDetail() {
 
       </div>
 
+      <AskDoubtModal
+        isOpen={showDoubtModal}
+        onClose={() => setShowDoubtModal(false)}
+        courseId={id}
+        courseName={course?.courseName || course?.title}
+        onDoubtSubmitted={(newDoubt) => {
+          if (newDoubt) setCourseDoubts((prev) => [newDoubt, ...prev]);
+        }}
+      />
     </div>
   );
 }

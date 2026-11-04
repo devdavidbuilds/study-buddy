@@ -23,6 +23,7 @@ import {
   FolderOpen,
   UserPlus,
   MessageSquare,
+  HelpCircle,
   ShieldCheck,
 } from 'lucide-react';
 import SakuraPetals from '../../components/ui/SakuraPetals';
@@ -41,6 +42,8 @@ import FacultyStudentProgress from './FacultyStudentProgress';
 import FacultyStudents from './FacultyStudents';
 import FacultyEnrollments from './FacultyEnrollments';
 import FacultyFeedback from './FacultyFeedback';
+import FacultyDoubts from './FacultyDoubts';
+import { getFacultyDoubts } from '../../api/doubtApi';
 import { getFacultyFeedback } from '../../api/feedbackApi';
 import { getEnrollmentRequests } from '../../api/enrollmentApi';
 import FacultyLectureMaterials from './FacultyLectureMaterials';
@@ -57,6 +60,7 @@ const sidebarItems = [
   { key: 'submissions', icon: ClipboardCheck, label: 'Submissions & Evaluation' },
   { key: 'quiz-generator', icon: Brain, label: 'Quiz Creator' },
   { key: 'enrollments', icon: UserPlus, label: 'Enrollment Requests' },
+  { key: 'doubts', icon: HelpCircle, label: 'Student Doubts' },
   { key: 'feedback', icon: MessageSquare, label: 'Course Feedback' },
   { key: 'students', icon: Users, label: 'Students' },
   { key: 'student-progress', icon: TrendingUp, label: 'Student Progress' },
@@ -126,6 +130,7 @@ export default function FacultyDashboard() {
   const [overview, setOverview] = useState(null);
   const [pendingEnrollments, setPendingEnrollments] = useState(0);
   const [unrepliedFeedback, setUnrepliedFeedback] = useState(0);
+  const [pendingDoubts, setPendingDoubts] = useState(0);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [userRole, setUserRole] = useState('');
   const navigate = useNavigate();
@@ -145,6 +150,10 @@ export default function FacultyDashboard() {
           getEnrollmentRequests('pending')
             .then((enrollRes) => setPendingEnrollments(enrollRes?.data?.counts?.pending || 0))
             .catch(() => setPendingEnrollments(0));
+
+          getFacultyDoubts({ status: 'pending' })
+            .then((doubtsRes) => setPendingDoubts(doubtsRes?.data?.data?.summary?.pending || 0))
+            .catch(() => setPendingDoubts(0));
 
           // Students, assignments, average progress and recent activity.
           getFacultyOverview()
@@ -306,6 +315,14 @@ export default function FacultyDashboard() {
       return (
         <FacultyQuizGenerator
           onBack={() => setActiveNav('dashboard')}
+        />
+      );
+    }
+
+    if (activeNav === 'doubts') {
+      return (
+        <FacultyDoubts
+          onCountsChange={(n) => setPendingDoubts(n)}
         />
       );
     }
@@ -526,9 +543,9 @@ export default function FacultyDashboard() {
               >
                 <Icon size={18} />
                 <span>{item.label}</span>
-                {((item.key === 'enrollments' && pendingEnrollments > 0) || (item.key === 'feedback' && unrepliedFeedback > 0)) && (
+                {((item.key === 'enrollments' && pendingEnrollments > 0) || (item.key === 'feedback' && unrepliedFeedback > 0) || (item.key === 'doubts' && pendingDoubts > 0)) && (
                   <span className="fd-nav-badge" style={{ marginLeft: 'auto', background: 'var(--color-accent)', color: '#fff', borderRadius: 999, fontSize: 11, fontWeight: 700, padding: '1px 7px' }}>
-                    {item.key === 'feedback' ? unrepliedFeedback : pendingEnrollments}
+                    {item.key === 'doubts' ? pendingDoubts : item.key === 'feedback' ? unrepliedFeedback : pendingEnrollments}
                   </span>
                 )}
               </button>

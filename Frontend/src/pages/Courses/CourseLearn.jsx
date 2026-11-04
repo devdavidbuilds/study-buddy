@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
+  HelpCircle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -28,6 +29,7 @@ import GlassCard from '../../components/ui/GlassCard';
 import ProgressBar from '../../components/ui/ProgressBar';
 import PageState from '../../components/ui/PageState';
 import LessonContentRenderer from '../../components/course/LessonContentRenderer';
+import AskDoubtModal from '../../components/doubt/AskDoubtModal';
 import VisualExplanations from '../../components/course/VisualExplanations';
 import {
   ExpandableSection,
@@ -102,6 +104,7 @@ export default function CourseLearn() {
   const navigate = useNavigate();
 
   // ---- core state ----
+  const [showDoubtModal, setShowDoubtModal] = useState(false);
   const [course, setCourse] = useState(null);
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1038,6 +1041,15 @@ export default function CourseLearn() {
                     <Sparkles size={14} />
                     Ask Buddy
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ marginLeft: "var(--space-2)" }}
+                    onClick={() => setShowDoubtModal(true)}
+                  >
+                    <HelpCircle size={14} />
+                    Ask Faculty
+                  </button>
                 </div>
               )}
             </div>
@@ -1457,7 +1469,7 @@ export default function CourseLearn() {
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              style={{ width: '100%' }}
+              style={{ width: '100%', marginBottom: 'var(--space-2)' }}
               onClick={() =>
                 navigate(
                   `/ai-tutor?courseId=${encodeURIComponent(id)}&moduleId=${encodeURIComponent(activeEntry.moduleId)}&lessonId=${encodeURIComponent(lesson.id)}`
@@ -1467,10 +1479,26 @@ export default function CourseLearn() {
               <Sparkles size={14} />
               Ask Buddy
             </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ width: '100%' }}
+              onClick={() => setShowDoubtModal(true)}
+            >
+              <HelpCircle size={14} />
+              Ask Faculty
+            </button>
           </GlassCard>
         </div>
 
       </div>
+      <AskDoubtModal
+        isOpen={showDoubtModal}
+        onClose={() => setShowDoubtModal(false)}
+        courseId={id}
+        courseName={course?.courseName || course?.title}
+        lessonTitle={lesson?.title || ""}
+      />
     </div>
   );
 }

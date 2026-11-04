@@ -5,6 +5,7 @@ const LectureMaterial = require("../models/LectureMaterial");
 const Assignment = require("../models/Assignment");
 const Certificate = require("../models/Certificate");
 const Announcement = require("../models/Announcement");
+const Doubt = require("../models/Doubt");
 
 const DAY = 24 * 60 * 60 * 1000;
 const LOOKBACK_DAYS = 30;
@@ -166,7 +167,28 @@ const getNotifications = async (req, res) => {
       });
     }
 
-    
+    // Student: Faculty replies to their doubts
+    const doubtReplies = await Doubt.find({
+      student: userId,
+      status: "resolved",
+      "reply.repliedAt": { $gte: since },
+    })
+      .populate("course", "courseName title")
+      .populate("reply.repliedBy", "fullName")
+      .lean();
+
+    for (const d of doubtReplies) {
+      items.push({
+        id: `doubt-reply-${d._id}`,
+        category: "doubt",
+        type: "success",
+        title: "Faculty answered your doubt",
+        message: `${d.reply?.repliedBy?.fullName || "Faculty"} answered: "${d.title}" in ${courseName(d.course)}.`,
+        link: `/courses/${d.course?._id || ""}`,
+        timestamp: d.reply?.repliedAt || d.updatedAt,
+      });
+    }
+
     // Admin Global Announcements targeted to this user
     const userRole = req.user.role || "student";
     const targetRoles = ["all"];
@@ -197,6 +219,30 @@ const getNotifications = async (req, res) => {
         sender: ann.senderName || "Platform Administration",
         target: ann.target,
       });
+    }
+
+    // Faculty/Admin: Pending student doubts awaiting response
+    if (userRole === "faculty" || userRole === "admin") {
+      const pendingDoubts = await Doubt.find({
+        ...(userRole === "admin" ? {} : { faculty: userId }),
+        status: "pending",
+        createdAt: { $gte: since },
+      })
+        .populate("student", "fullName")
+        .populate("course", "courseName title")
+        .lean();
+
+      for (const d of pendingDoubts) {
+        items.push({
+          id: `doubt-new-${d._id}`,
+          category: "doubt",
+          type: "info",
+          title: "New student doubt",
+          message: `${d.student?.fullName || "A student"} asked about: "${d.title}" in ${courseName(d.course)}.`,
+          link: "/faculty",
+          timestamp: d.createdAt,
+        });
+      }
     }
 
     items.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0) || new Date(b.timestamp) - new Date(a.timestamp));
