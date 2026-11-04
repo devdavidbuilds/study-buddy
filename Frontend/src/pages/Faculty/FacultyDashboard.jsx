@@ -33,6 +33,7 @@ import { getRelativeTime } from '../../utils/helpers';
 import { setAuthToken } from '../../api/api';
 import FacultyMyCourses from './FacultyMyCourses';
 import FacultyCourseContent from './FacultyCourseContent';
+import FacultyCreateCourse from './FacultyCreateCourse';
 import FacultyCreateAssignment from './FacultyCreateAssignment';
 import FacultySubmissions from './FacultySubmissions';
 import FacultyQuizGenerator from './FacultyQuizGenerator';
@@ -71,7 +72,7 @@ const quickActions = [
     title: 'Create Course',
     description: 'Design and publish a new course for your students.',
     cta: 'Create now',
-    nav: 'my-courses',
+    nav: 'create-course',
   },
   {
     key: 'create-assignment',
@@ -128,8 +129,7 @@ export default function FacultyDashboard() {
   const [userRole, setUserRole] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       try {
         const res = await profile();
         const user = res?.data?.user;
@@ -168,6 +168,8 @@ export default function FacultyDashboard() {
         setFacultyName('Faculty');
       }
     };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -180,7 +182,7 @@ export default function FacultyDashboard() {
   /* Handle navigation from child components (e.g. FacultyMyCourses) */
   const handleChildNavigate = (target, id) => {
     if (target === 'create-course') {
-      setActiveNav('my-courses');
+      setActiveNav('create-course');
     } else if (target === 'manage-content' && id) {
       setSelectedCourseId(id);
       setActiveNav('manage-content');
@@ -240,7 +242,28 @@ export default function FacultyDashboard() {
   ];
 
   /* ── Render content based on active nav ── */
-  const renderContent = () => {
+    const renderContent = () => {
+    if (activeNav === 'create-course') {
+      return (
+        <FacultyCreateCourse
+          onBack={() => setActiveNav('my-courses')}
+          onCreated={(createdCourse) => {
+            fetchData();
+            if (createdCourse?._id) {
+              setSelectedCourseId(createdCourse._id);
+              setActiveNav('manage-content');
+            } else {
+              setActiveNav('my-courses');
+            }
+          }}
+          onViewCourses={() => {
+            fetchData();
+            setActiveNav('my-courses');
+          }}
+        />
+      );
+    }
+
     if (activeNav === 'my-courses') {
       return <FacultyMyCourses onNavigate={handleChildNavigate} />;
     }
@@ -359,6 +382,13 @@ export default function FacultyDashboard() {
                   <BookOpen size={28} className="fd-empty-icon" />
                   <p>Your courses will appear here</p>
                   <span>Create your first course to get started</span>
+                  <button
+                    className="fd-link-btn"
+                    onClick={() => setActiveNav('create-course')}
+                    style={{ marginTop: '8px' }}
+                  >
+                    Create course <ChevronRight size={14} />
+                  </button>
                 </div>
               ) : (
                 <div className="fd-empty-state">
@@ -487,7 +517,7 @@ export default function FacultyDashboard() {
             return (
               <button
                 key={item.key}
-                className={`fd-nav-item ${activeNav === item.key ? 'active' : ''}`}
+                className={`fd-nav-item ${(activeNav === item.key || (item.key === 'my-courses' && (activeNav === 'create-course' || activeNav === 'manage-content'))) ? 'active' : ''}`}
                 onClick={() => {
                   setActiveNav(item.key);
                   setSidebarOpen(false);
