@@ -33,6 +33,7 @@ import {
   User,
   Briefcase,
   Phone,
+  Clock,
 } from 'lucide-react';
 import SakuraPetals from '../../components/ui/SakuraPetals';
 import ThemeToggle from '../../components/ui/ThemeToggle';
