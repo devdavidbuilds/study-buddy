@@ -917,7 +917,7 @@
 .ai-send-btn:hover { transform: scale(1.06); }
 .ai-send-btn:disabled { opacity: 0.5; }
 
-.ai-mic-btn {
+.ai-attach-btn {
   width: 42px;
   height: 42px;
   border-radius: 50%;
@@ -927,8 +927,75 @@
   justify-content: center;
   flex-shrink: 0;
   transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
-.ai-mic-btn:hover { background: rgba(46, 46, 46, 0.05); color: var(--color-accent); }
+.ai-attach-btn:hover { background: rgba(46, 46, 46, 0.05); color: var(--color-accent); }
+.ai-attach-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ai-file-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.ai-file-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ai-file-icon {
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.ai-file-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ai-file-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-file-size {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.ai-file-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ai-file-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
 
 .ai-tool-row {
   display: flex;

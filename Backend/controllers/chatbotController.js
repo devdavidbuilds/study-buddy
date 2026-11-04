@@ -1,4 +1,5 @@
 const Course = require("../models/Course");
+const { PDFParse } = require("pdf-parse");
 const { createTutorResponse, createGeneralResponse } = require("../services/chatbotService");
 const { getLLMConfig, isConfigured, createLLMClient, describeError, classifyLLMError } = require("../services/llm");
 
@@ -97,7 +98,7 @@ const toChatMessages = (history, message) => {
   const turns = (Array.isArray(history) ? history : [])
     .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
     .slice(-12)
-    .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 15000) }));
 
   turns.push({ role: "user", content: message });
 
@@ -114,7 +115,7 @@ const toChatMessages = (history, message) => {
 const sendChatbotMessage = async (req, res) => {
   const { message, courseId, context, history } = req.body || {};
 
-  if (!message || typeof message !== "string" || !message.trim() || message.length > 4000) {
+  if (!message || typeof message !== "string" || !message.trim() || message.length > 30000) {
     return res.status(400).json({ success: false, message: "A message is required." });
   }
 
@@ -192,4 +193,155 @@ const sendChatbotMessage = async (req, res) => {
   }
 };
 
-module.exports = { sendChatbotMessage };
+const buildFallbackSummary = (fileName, text, userPrompt) => {
+  const clean = String(text || "").replace(/\r\n/g, "\n");
+  const paragraphs = clean
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const sentences = clean
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 20 && s.length < 200);
+
+  const topTakeaways = sentences.slice(0, 6);
+
+  return [
+    `## 📌 Summary: ${fileName}`,
+    userPrompt ? `> **Your focus:** *${userPrompt}*\n` : "",
+    `### 📖 Core Overview`,
+    paragraphs[0] || `Here is a structured summary of the notes from **${fileName}**.`,
+    "",
+    `### 🔑 Key Takeaways & Core Concepts`,
+    topTakeaways.length > 0
+      ? topTakeaways.map((s) => `- ${s}`).join("\n")
+      : "- Comprehensive review of key points and core subject concepts.",
+    "",
+    `### 📝 Main Topics & Highlights`,
+    paragraphs.length > 1
+      ? paragraphs
+          .slice(1, 4)
+          .map((p, i) => `**Topic ${i + 1}**\n${p.slice(0, 350)}...`)
+          .join("\n\n")
+      : "- All major topics from the notes have been indexed for study and revision.",
+    "",
+    `### 💡 Next Steps with Buddy`,
+    `You can now ask me any specific question about **${fileName}**, request practice quiz questions, or ask me to explain any concept in more detail!`,
+  ].join("\n\n");
+};
+
+const summarizeNotes = async (req, res) => {
+  try {
+    let extractedText = "";
+    let fileName = req.file?.originalname || "Uploaded Notes";
+
+    if (req.file) {
+      const isPdf =
+        req.file.mimetype === "application/pdf" ||
+        fileName.toLowerCase().endsWith(".pdf");
+
+      if (isPdf) {
+        try {
+          const parser = new PDFParse({ data: req.file.buffer });
+          const parsed = await parser.getText();
+          extractedText = (parsed.text || "").trim();
+        } catch (pdfErr) {
+          console.error("PDF parse error:", pdfErr);
+          return res.status(400).json({
+            success: false,
+            message: "Unable to parse this PDF file. Please ensure it contains readable text or copy and paste the notes.",
+          });
+        }
+      } else {
+        extractedText = req.file.buffer.toString("utf-8").trim();
+      }
+    } else if (req.body?.text && typeof req.body.text === "string") {
+      extractedText = req.body.text.trim();
+      fileName = req.body.fileName || "Pasted Notes";
+    }
+
+    if (!extractedText) {
+      return res.status(400).json({
+        success: false,
+        message: "No readable notes or text found. Please upload a valid document or paste text.",
+      });
+    }
+
+    const MAX_NOTE_CHARS = 25000;
+    const isTruncated = extractedText.length > MAX_NOTE_CHARS;
+    const cleanText = isTruncated
+      ? extractedText.slice(0, MAX_NOTE_CHARS) + "\n\n[... Remaining notes truncated for length ...]"
+      : extractedText;
+
+    const userPrompt = (req.body?.prompt || "").trim();
+
+    const client = getTutorClient();
+    let answer = "";
+    let source = "rules";
+    let fallbackReason = null;
+
+    if (!client) {
+      fallbackReason = "not_configured";
+    } else {
+      try {
+        const system = [
+          "You are Buddy, the personal AI Tutor and study companion in Study Buddy.",
+          "Your mission is to summarize student study notes or lecture slides clearly, comprehensively, and beautifully in Markdown.",
+          "Format your response with the following sections:",
+          "## 📌 Executive Summary",
+          "Provide a clear, high-level summary of what these notes are about and their core focus.",
+          "",
+          "## 🔑 Key Concepts & Definitions",
+          "Highlight fundamental principles, core terms, formulas, or concepts in bullet points with clear explanations.",
+          "",
+          "## 📝 Detailed Topic Breakdown",
+          "Organize the main subjects, modules, or sections from the notes into readable subsections (###) with important takeaways.",
+          "",
+          "## 💡 Exam & Study Tips",
+          "Highlight high-yield exam points, potential quiz questions, or practical tips for remembering this material.",
+        ].join("\n");
+
+        const userMessage = [
+          `Please provide a comprehensive summary of these uploaded study notes: "${fileName}".`,
+          userPrompt ? `Student's custom request: ${userPrompt}\n` : "",
+          "--- Content of notes ---",
+          cleanText,
+        ].filter(Boolean).join("\n\n");
+
+        const result = await client.chat({
+          system,
+          messages: [{ role: "user", content: userMessage }],
+          maxOutputTokens: 2000,
+        });
+        answer = result.text;
+        source = client.isMock ? "mock" : "llm";
+      } catch (error) {
+        fallbackReason = classifyLLMError(error);
+        console.error(`AI Tutor summarization error (${fallbackReason}), using fallback:`, describeError(error));
+      }
+    }
+
+    if (!answer) {
+      answer = buildFallbackSummary(fileName, cleanText, userPrompt);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        answer,
+        source,
+        fileName,
+        characterCount: extractedText.length,
+        ...(source === "rules" && fallbackReason ? { notice: FALLBACK_NOTICES[fallbackReason] } : {}),
+      },
+    });
+  } catch (error) {
+    console.error("Summarize Notes Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while summarizing the notes. Please try again.",
+    });
+  }
+};
+
+module.exports = { sendChatbotMessage, summarizeNotes };
