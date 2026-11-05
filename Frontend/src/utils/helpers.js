@@ -74,3 +74,17 @@ export function truncateText(text, maxLength = 100) {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + '...';
 }
+
+
+export function formatYearOfStudy(year) {
+  if (!year && year !== 0) return '';
+  const y = Number(year);
+  if (y === 1) return '1st Year';
+  if (y === 2) return '2nd Year';
+  if (y === 3) return '3rd Year';
+  if (y === 4) return '4th Year';
+  if (y === 5) return 'PG';
+  if (y === 6) return 'Others';
+  if (typeof year === 'string') return year;
+  return `Year ${year}`;
+}

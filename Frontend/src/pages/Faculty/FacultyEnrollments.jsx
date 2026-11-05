@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, Check, Clock, RefreshCw, UserPlus, X } from 'lucide-react';
 import { getEnrollmentRequests, decideEnrollment } from '../../api/enrollmentApi';
+import { formatYearOfStudy } from '../../utils/helpers';
 import { generateInitials, getRelativeTime } from '../../utils/helpers';
 import './FacultyStudentProgress.css';
 import './FacultyStudents.css';
@@ -128,7 +129,7 @@ export default function FacultyEnrollments({ onBack, onCountsChange }) {
               </div>
 
               <div className="fst-academic">
-                <span>{[r.student.rollNumber, r.student.department, r.student.yearOfStudy ? `Year ${r.student.yearOfStudy}` : ''].filter(Boolean).join(' · ') || '—'}</span>
+                <span>{[r.student.rollNumber, r.student.department, r.student.yearOfStudy ? formatYearOfStudy(r.student.yearOfStudy) : ''].filter(Boolean).join(' · ') || '—'}</span>
                 <span>{r.student.university || ''}</span>
               </div>
 

@@ -98,7 +98,7 @@ export default function Profile() {
               color: 'var(--text-tertiary)',
             }}
           >
-            {[profile?.university, profile?.department, profile?.yearOfStudy ? `Year ${profile.yearOfStudy}` : '']
+            {[profile?.university, profile?.department, profile?.yearOfStudy ? formatYearOfStudy(profile.yearOfStudy) : '']
               .filter(Boolean)
               .join(' • ') || 'Study Buddy Community'}
           </p>

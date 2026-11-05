@@ -174,7 +174,7 @@ export default function FacultyFeedback({ onBack, onCountsChange }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
                         {f.student.fullName}
-                        <span className="cx-muted"> · {[f.student.rollNumber, f.student.department, f.student.yearOfStudy ? `Year ${f.student.yearOfStudy}` : ''].filter(Boolean).join(' · ')}</span>
+                        <span className="cx-muted"> · {[f.student.rollNumber, f.student.department, f.student.yearOfStudy ? formatYearOfStudy(f.student.yearOfStudy) : ''].filter(Boolean).join(' · ')}</span>
                       </div>
                       <div className="cx-muted">
                         <Stars value={f.rating} size={12} /> · {f.course.thumbnail || '📘'} {f.course.courseName} · {getRelativeTime(f.createdAt)}

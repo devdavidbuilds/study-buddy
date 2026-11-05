@@ -22,7 +22,14 @@ import StudyBuddyLogo from '../../components/ui/StudyBuddyLogo';
 import '../Login/Login.css';
 
 const PHONE_PATTERN = /^\+?[0-9\s-]{7,20}$/;
-const YEARS_OF_STUDY = [1, 2, 3, 4, 5, 6];
+const YEARS_OF_STUDY = [
+  { value: 1, label: '1st Year' },
+  { value: 2, label: '2nd Year' },
+  { value: 3, label: '3rd Year' },
+  { value: 4, label: '4th Year' },
+  { value: 5, label: 'PG' },
+  { value: 6, label: 'Others' },
+];
 
 export default function Signup() {
   const [step, setStep] = useState(1);
@@ -482,9 +489,9 @@ export default function Signup() {
                       <option value="" disabled>
                         Select your year
                       </option>
-                      {YEARS_OF_STUDY.map((year) => (
-                        <option key={year} value={year}>
-                          Year {year}
+                      {YEARS_OF_STUDY.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
                         </option>
                       ))}
                     </select>

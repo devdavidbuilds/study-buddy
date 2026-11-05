@@ -188,7 +188,7 @@ export default function FacultyStudents({ onBack }) {
                   ['Phone', s.phone],
                   ['Roll number', s.rollNumber],
                   ['Department', s.department],
-                  ['Year of study', s.yearOfStudy ? `Year ${s.yearOfStudy}` : ''],
+                  ['Year of study', s.yearOfStudy ? formatYearOfStudy(s.yearOfStudy) : ''],
                   ['College / university', s.university],
                   ['Date of birth', s.dateOfBirth ? formatDate(s.dateOfBirth) : ''],
                   ['Registered on', formatDate(s.createdAt)],
@@ -368,7 +368,7 @@ export default function FacultyStudents({ onBack }) {
                       </div>
 
                       <div className="fst-academic">
-                        <span>{[s.rollNumber, s.department, s.yearOfStudy ? `Year ${s.yearOfStudy}` : ''].filter(Boolean).join(' · ') || '—'}</span>
+                        <span>{[s.rollNumber, s.department, s.yearOfStudy ? formatYearOfStudy(s.yearOfStudy) : ''].filter(Boolean).join(' · ') || '—'}</span>
                         <span>{s.university || 'College not given'}</span>
                       </div>
 
