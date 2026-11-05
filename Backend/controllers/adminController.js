@@ -12,6 +12,10 @@ const { DOMAIN_DEFINITIONS } = require("../utils/domainHelper");
 
 const VALID_DOMAINS = DOMAIN_DEFINITIONS.map((d) => d.id);
 
+let cachedOverview = null;
+let cachedOverviewAt = 0;
+const OVERVIEW_CACHE_TTL = 30 * 1000; // 30s in-memory cache for instant loads
+
 // ==============================
 // Admin: POST /api/admin/faculty
 // Create a new faculty account assigned to a domain
@@ -69,6 +73,8 @@ const createFaculty = async (req, res) => {
       isActive: true,
     });
 
+    cachedOverview = null;
+
     return res.status(201).json({
       success: true,
       message: `Faculty account for ${newFaculty.fullName} created successfully in ${newFaculty.domain}.`,
@@ -98,6 +104,12 @@ const createFaculty = async (req, res) => {
 // ==============================
 const getAdminOverview = async (req, res) => {
   try {
+    if (cachedOverview && Date.now() - cachedOverviewAt < OVERVIEW_CACHE_TTL) {
+      return res.status(200).json({
+        success: true,
+        data: cachedOverview,
+      });
+    }
     const [
       totalStudents,
       totalFaculty,
@@ -163,28 +175,33 @@ const getAdminOverview = async (req, res) => {
       : 4.5;
     const totalReviews = feedbackStats[0]?.count || 0;
 
+    const overviewData = {
+      summary: {
+        totalStudents,
+        totalFaculty,
+        totalCourses,
+        totalEnrollments,
+        averageRating: overallAvg,
+        totalReviews,
+      },
+      domainStats,
+      domains: VALID_DOMAINS,
+      recentActivity: recentActivityDocs.map((a) => ({
+        _id: a._id,
+        activityType: a.activityType,
+        studentName: a.student?.fullName || "Student",
+        courseName: a.course?.courseName || "Course",
+        domain: a.course?.domain || "",
+        createdAt: a.createdAt,
+      })),
+    };
+
+    cachedOverview = overviewData;
+    cachedOverviewAt = Date.now();
+
     return res.status(200).json({
       success: true,
-      data: {
-        summary: {
-          totalStudents,
-          totalFaculty,
-          totalCourses,
-          totalEnrollments,
-          averageRating: overallAvg,
-          totalReviews,
-        },
-        domainStats,
-        domains: VALID_DOMAINS,
-        recentActivity: recentActivityDocs.map((a) => ({
-          _id: a._id,
-          activityType: a.activityType,
-          studentName: a.student?.fullName || "Student",
-          courseName: a.course?.courseName || "Course",
-          domain: a.course?.domain || "",
-          createdAt: a.createdAt,
-        })),
-      },
+      data: overviewData,
     });
   } catch (error) {
     console.error("Admin Overview Error:", error);
@@ -536,6 +553,8 @@ const createAnnouncement = async (req, res) => {
       isPinned: Boolean(isPinned),
     });
 
+    cachedOverview = null;
+
     return res.status(201).json({
       success: true,
       message: "Announcement published successfully.",
@@ -601,6 +620,8 @@ const deleteAnnouncement = async (req, res) => {
       });
     }
 
+    cachedOverview = null;
+
     return res.status(200).json({
       success: true,
       message: "Announcement deleted successfully.",
@@ -632,6 +653,8 @@ const togglePinAnnouncement = async (req, res) => {
 
     announcement.isPinned = !announcement.isPinned;
     await announcement.save();
+
+    cachedOverview = null;
 
     return res.status(200).json({
       success: true,

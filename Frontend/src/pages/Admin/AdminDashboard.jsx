@@ -130,10 +130,9 @@ export default function AdminDashboard() {
   const [ratingDomainFilter, setRatingDomainFilter] = useState('All');
   const [ratingSearch, setRatingSearch] = useState('');
 
-  // Initial load
+  // Initial load: load platform overview
   useEffect(() => {
     loadOverviewData();
-    loadFacultyData();
   }, []);
 
   // Tab change handlers
@@ -232,6 +231,7 @@ export default function AdminDashboard() {
       const res = await getAdminOverview();
       if (res?.data?.success && res.data.data?.summary?.totalCourses > 0) {
         setOverview(res.data.data);
+        setLoadingOverview(false);
         return;
       }
     } catch (err) {
@@ -300,6 +300,7 @@ export default function AdminDashboard() {
       const res = await getFacultyList(params);
       if (res?.data?.success && res.data.data?.length > 0) {
         setFacultyList(res.data.data);
+        setLoadingFaculty(false);
         return;
       }
     } catch (err) {
@@ -333,6 +334,7 @@ export default function AdminDashboard() {
       const res = await getAdminStudents(params);
       if (res?.data?.success && res.data.data?.length > 0) {
         setStudentList(res.data.data);
+        setLoadingStudents(false);
         return;
       }
     } catch (err) {
@@ -395,6 +397,7 @@ export default function AdminDashboard() {
       const res = await getAdminCourseRatings(params);
       if (res?.data?.success && res.data.data?.length > 0) {
         setCourseRatings(res.data);
+        setLoadingRatings(false);
         return;
       }
     } catch (err) {

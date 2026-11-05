@@ -224,6 +224,10 @@ select {
   outline: none;
 }
 
+select {
+  background-repeat: no-repeat !important;
+}
+
 /* ---- Scrollbar ---- */
 ::-webkit-scrollbar {
   width: 6px;

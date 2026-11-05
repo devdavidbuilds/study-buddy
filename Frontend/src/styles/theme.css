@@ -352,7 +352,7 @@
 }
 [data-theme="dark"] .input-field,
 [data-theme="dark"] select {
-  background-repeat: no-repeat;
+  background-repeat: no-repeat !important;
 }
 [data-theme="dark"] select,
 [data-theme="dark"] textarea:not(.codelab-console-textarea) {
