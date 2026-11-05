@@ -1,0 +1,46 @@
+# Study Buddy -- User Guide
+
+This guide gives a high-level walkthrough of the main user journeys in
+Study Buddy. The exact screens and available actions may depend on the
+deployed version and the user's role.
+
+## Student Journey
+
+1.  **Sign in:** Access the platform using the account provided or
+    registered for the application.
+2.  **Explore courses:** Browse the available course catalogue and
+    identify a course of interest.
+3.  **Request enrolment:** Submit an enrolment request where faculty
+    approval is required.
+4.  **Study lessons:** After approval, open the course and work through
+    its modules and lessons.
+5.  **Check understanding:** Complete lesson checks and module quizzes.
+6.  **Submit assignments:** Upload assignment work in the accepted PDF
+    format before the deadline.
+7.  **Practise coding:** Use CodeLab to write and run supported
+    programming exercises.
+8.  **Get learning support:** Ask the AI Tutor questions or request a
+    summary of learning material.
+9.  **Plan study time:** Use the planner, timer, and personal notes to
+    organise study sessions.
+10. **Track progress:** Review learning progress and eligible
+    achievements or certificates.
+
+## Faculty Journey
+
+1.  Sign in using a faculty account.
+2.  Review the faculty dashboard.
+3.  Manage courses and learning resources.
+4.  Review and approve or reject enrolment requests.
+5.  Create quizzes and assignments.
+6.  Review student PDF submissions.
+7.  Record marks and provide feedback.
+8.  Monitor student progress.
+
+## Helpful Notes
+
+-   Use the correct account role to access the relevant dashboard.
+-   Check assignment instructions and deadlines before submitting work.
+-   Do not share passwords, API keys, or other private credentials.
+-   If a feature is unavailable, contact the project team or the
+    platform administrator.
