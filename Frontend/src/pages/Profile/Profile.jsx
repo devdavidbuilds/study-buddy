@@ -7,7 +7,7 @@ import PageState from '../../components/ui/PageState';
 import useProfile from '../../hooks/useProfile';
 import useLearningSummary from '../../hooks/useLearningSummary';
 import { getMyCertificates, downloadCertificate } from '../../api/certificateApi';
-import { generateInitials } from '../../utils/helpers';
+import { generateInitials, formatYearOfStudy } from '../../utils/helpers';
 
 export default function Profile() {
   const navigate = useNavigate();

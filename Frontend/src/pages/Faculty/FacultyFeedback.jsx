@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, MessageSquare, MessageSquareReply, RefreshCw, Star, ThumbsUp } from 'lucide-react';
 import { getFacultyFeedback, replyToFeedback, deleteFeedbackReply } from '../../api/feedbackApi';
-import { generateInitials, getRelativeTime } from '../../utils/helpers';
+import { generateInitials, getRelativeTime, formatYearOfStudy } from '../../utils/helpers';
 import './FacultyStudentProgress.css';
 import './FacultyStudents.css';
 import '../../components/course/CourseExtras.css';

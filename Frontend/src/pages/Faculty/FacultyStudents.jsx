@@ -15,7 +15,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { getStudents, getStudentDetail } from '../../api/facultyStudentsApi';
-import { generateInitials, getRelativeTime } from '../../utils/helpers';
+import { generateInitials, getRelativeTime, formatYearOfStudy } from '../../utils/helpers';
 import './FacultyStudentProgress.css';
 import './FacultyStudents.css';
 
