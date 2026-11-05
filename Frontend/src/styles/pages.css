@@ -819,7 +819,7 @@
   max-height: 720px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .ai-tutor-page {
     height: calc(100vh - var(--topbar-height) - var(--bottom-nav-height) - var(--space-6));
   }
@@ -1199,7 +1199,7 @@
   gap: var(--space-6);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1140px) {
   .two-col-grid { grid-template-columns: 1fr; }
 }
 
@@ -1230,9 +1230,16 @@
   min-height: calc(100vh - var(--topbar-height) - var(--space-16));
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1440px) {
   .learn-layout {
     grid-template-columns: 300px 1fr 260px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1439px) {
+  .learn-layout {
+    grid-template-columns: 260px 1fr;
+    gap: var(--space-4);
   }
 }
 
@@ -2510,7 +2517,7 @@
   gap: var(--space-4);
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 1439px) {
   .learn-right-panel {
     display: none;
   }
@@ -2521,7 +2528,7 @@
   }
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1440px) {
   .learn-right-panel-inline {
     display: none;
   }

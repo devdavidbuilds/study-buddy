@@ -541,10 +541,48 @@
   padding-top: var(--space-2);
 }
 
+/* Compact Faculty Layout for College Computers (769px - 1280px) */
+@media (min-width: 769px) and (max-width: 1280px) {
+  .fd-sidebar {
+    width: 200px;
+    min-width: 200px;
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .fd-logo-text {
+    font-size: 1rem;
+  }
+
+  .fd-nav-item {
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8125rem;
+    gap: var(--space-2);
+  }
+
+  .fd-topbar {
+    padding: var(--space-3) var(--space-5);
+  }
+
+  .fd-content {
+    padding: var(--space-4) var(--space-5);
+    gap: var(--space-4);
+  }
+
+  .fd-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .fd-grid-2col {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
 /* ========================================
-   RESPONSIVE — Tablet (≤ 1024px)
+   RESPONSIVE — Tablet & Mobile (≤ 768px)
    ======================================== */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .fd-sidebar {
     position: fixed;
     left: 0;

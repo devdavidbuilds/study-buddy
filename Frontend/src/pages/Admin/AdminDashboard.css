@@ -9,7 +9,7 @@
   overflow-x: hidden;
   max-width: 1400px;
   margin: 0 auto;
-  zoom: 0.92;
+  /* zoom: 0.92 replaced with clean responsive variables for cross-browser stability */
 }
 
 /* Header */
@@ -155,7 +155,7 @@
 /* Stats Grid - Sleek & Compact */
 .admin-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -1236,9 +1236,61 @@
   margin-top: 20px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1240px) {
+  .admin-page {
+    padding: 0.85rem 1rem 2rem;
+  }
+
+  .admin-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .admin-header-actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-nav-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .admin-tab-btn {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+
   .admin-announcements-layout {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .admin-rating-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-domains-grid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .admin-table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.8125rem;
   }
 }
 

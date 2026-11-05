@@ -725,11 +725,21 @@
 .codelab-ai-input-row button:disabled { opacity: 0.5; }
 
 /* ---- Responsive ---- */
-@media (max-width: 1200px) {
-  .codelab-body { grid-template-columns: 220px 1fr 280px; }
+@media (max-width: 1280px) {
+  .codelab-body { grid-template-columns: 200px 1fr 280px; }
+  .codelab-header { gap: var(--space-3); padding: var(--space-2) var(--space-4); }
+  .codelab-toolbar { gap: var(--space-2); padding: var(--space-2) var(--space-3); }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1080px) and (min-width: 641px) {
+  /* On college screens (1024x768 / 1080p scaled): hide the problem browser sidebar, but KEEP the problem details next to code! */
+  .codelab-body { grid-template-columns: 290px 1fr; }
+  .codelab-sidebar { display: none; }
+  .codelab-details-panel { display: flex; }
+  .codelab-header-stats { display: none; }
+}
+
+@media (max-width: 640px) {
   .codelab-body { grid-template-columns: 1fr; }
   .codelab-sidebar, .codelab-details-panel { display: none; }
   .codelab-header-stats { display: none; }

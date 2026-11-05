@@ -682,6 +682,84 @@
   color: #6d6475;
 }
 
+/* Compact Scaling for College Computers & Lower Height Screens */
+@media (min-width: 981px) and (max-width: 1240px), (max-height: 800px) {
+  .login-page {
+    grid-template-columns: 0.95fr 1fr;
+  }
+
+  .login-illustration {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .illustration-icon {
+    font-size: 4.5rem;
+  }
+
+  .illustration-glow-ambient {
+    width: 320px;
+    height: 320px;
+  }
+
+  .illustration-hat-glow {
+    width: 110px;
+    height: 110px;
+  }
+
+  .illustration-content h2 {
+    font-size: 1.5rem;
+    margin-bottom: var(--space-2);
+  }
+
+  .illustration-content p {
+    font-size: 0.8125rem;
+    margin-bottom: var(--space-4);
+  }
+
+  .login-form-container {
+    padding: var(--space-4);
+  }
+
+  .login-card {
+    padding: 24px 22px 20px;
+    max-width: 420px;
+  }
+
+  .login-title {
+    font-size: 1.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.8125rem;
+    margin-bottom: var(--space-4);
+  }
+
+  .login-type-toggle {
+    margin-bottom: var(--space-4);
+    padding: 3px;
+  }
+
+  .login-type-btn {
+    padding: 7px 10px;
+    font-size: 0.8125rem;
+  }
+
+  .input-group {
+    margin-bottom: 12px;
+  }
+
+  .input-field {
+    padding: 10px 14px 10px 40px;
+    font-size: 0.875rem;
+  }
+
+  .login-btn {
+    padding: 11px 18px;
+    font-size: 0.9375rem;
+    margin-top: 6px;
+  }
+}
+
 /* ========================================
    RESPONSIVE DESIGN
    ======================================== */
