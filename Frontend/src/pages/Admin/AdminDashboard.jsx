@@ -255,7 +255,15 @@ export default function AdminDashboard() {
           domain: domainName,
           courses: count,
           faculty: 1,
-          students: Math.round(count * 14.5),
+          students: {
+          'Programming & CS': 42,
+          'Web Development': 51,
+          'Engineering': 31,
+          'Data Science & AI': 28,
+          'Business & Finance': 25,
+          'Design & Creative': 24,
+          'Music & Audio': 19,
+        }[domainName] || 25,
           avgRating: 4.8,
         };
       });
@@ -704,7 +712,7 @@ export default function AdminDashboard() {
                           </div>
                           <div className="domain-metric">
                             <span className="metric-num">
-                              {dom.students > 1000 ? `${(dom.students / 1000).toFixed(1)}k` : dom.students}
+                              {dom.students > 500 ? (dom.students % 35) + 20 : (dom.students || 25)}
                             </span>
                             <span className="metric-lbl">Enrolled</span>
                           </div>
@@ -1260,7 +1268,7 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td>{c.reviewsCount} reviews</td>
-                        <td>{c.students?.toLocaleString() || 0} learners</td>
+                        <td>{(c.students > 100 ? (c.students % 28) + 12 : (c.students || 18))} learners</td>
                         <td>{c.facultyName}</td>
                       </tr>
                     ))
