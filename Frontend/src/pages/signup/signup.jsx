@@ -18,6 +18,7 @@ import GlassCard from '../../components/ui/GlassCard';
 import { register } from '../../api/authApi';
 import { setAuthToken, unreachableMessage } from '../../api/api';
 import ThemeToggle from '../../components/ui/ThemeToggle';
+import StudyBuddyLogo from '../../components/ui/StudyBuddyLogo';
 import '../Login/Login.css';
 
 const PHONE_PATTERN = /^\+?[0-9\s-]{7,20}$/;
@@ -173,8 +174,8 @@ export default function Signup() {
         <GlassCard className="login-card">
           <div className="login-header">
             <div className="login-logo">
-              <div className="logo-icon">📚</div>
-              <h1>Study Buddy</h1>
+              <StudyBuddyLogo size={42} />
+              <span className="login-brand-name">Study Buddy</span>
             </div>
 
             <h2>
