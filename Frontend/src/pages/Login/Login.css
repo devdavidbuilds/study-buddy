@@ -5,10 +5,9 @@
 .login-page {
   min-height: 100vh;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-8) var(--space-4);
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  align-items: stretch;
   background-color: #0b0813;
   position: relative;
   overflow-x: hidden;
@@ -25,8 +24,8 @@
   height: 520px;
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 92, 147, 0.18) 0%,
-    rgba(176, 92, 255, 0.1) 40%,
+    rgba(255, 92, 147, 0.16) 0%,
+    rgba(176, 92, 255, 0.08) 40%,
     rgba(11, 8, 19, 0) 70%
   );
   filter: blur(50px);
@@ -43,35 +42,161 @@
   border-radius: var(--radius-full);
 }
 
-/* Old illustration hidden for modern centered layout */
+/* ========================================
+   LEFT COLUMN: HERO ILLUSTRATION & GRADUATE HAT
+   ======================================== */
 .login-illustration {
-  display: none !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) var(--space-8);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 92, 147, 0.09) 0%,
+    rgba(176, 92, 255, 0.06) 50%,
+    rgba(14, 10, 24, 0.8) 100%
+  );
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.illustration-glow-ambient {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 92, 147, 0.22) 0%, rgba(176, 92, 255, 0.12) 50%, transparent 75%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.illustration-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 460px;
+  padding: var(--space-4);
+}
+
+/* Graduate Hat Wrapper & Animations */
+.illustration-hat-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.illustration-hat-glow {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 92, 147, 0.45) 0%, rgba(176, 92, 255, 0.25) 50%, transparent 70%);
+  filter: blur(28px);
+  animation: hatPulseGlow 3.6s ease-in-out infinite;
+}
+
+.illustration-icon {
+  font-size: 6.5rem;
+  display: block;
+  position: relative;
+  z-index: 2;
+  animation: floatHat 3.6s ease-in-out infinite;
+  filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.5));
+  user-select: none;
+  line-height: 1;
+}
+
+@keyframes floatHat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-10px) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-18px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(3deg);
+  }
+}
+
+@keyframes hatPulseGlow {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.95;
+  }
+}
+
+.illustration-heading {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 14px 0;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.illustration-subtext {
+  font-size: 0.95rem;
+  color: #aba2b5;
+  margin: 0 0 28px 0;
+  line-height: 1.55;
+}
+
+.illustration-features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.illustration-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #dfd8e7;
+  backdrop-filter: blur(10px);
+}
+
+/* ========================================
+   RIGHT COLUMN: LOGIN FORM
+   ======================================== */
 .login-form-side {
   width: 100%;
   display: flex;
+  align-items: center;
   justify-content: center;
+  padding: var(--space-8) var(--space-6);
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  box-sizing: border-box;
 }
 
-/* Main card wrapper */
-.login-card-container {
-  width: 100%;
-  max-width: 440px;
-  position: relative;
-  z-index: 1;
-  margin: auto;
-}
-
-/* Card glass container */
+/* Main card */
 .login-card {
   width: 100%;
+  max-width: 440px;
   background: linear-gradient(
     180deg,
-    rgba(24, 19, 36, 0.88) 0%,
-    rgba(17, 13, 27, 0.94) 100%
+    rgba(24, 19, 36, 0.9) 0%,
+    rgba(17, 13, 27, 0.96) 100%
   );
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
@@ -80,6 +205,22 @@
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   box-sizing: border-box;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Mobile hat badge banner */
+.mobile-hat-banner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.mobile-hat-icon {
+  font-size: 3rem;
+  display: inline-block;
+  animation: floatHat 3.6s ease-in-out infinite;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
 }
 
 /* Brand header */
@@ -404,12 +545,6 @@
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* Footer */
 .login-footer {
   text-align: center;
@@ -445,6 +580,30 @@
     rgba(176, 92, 255, 0.06) 40%,
     rgba(250, 247, 249, 0) 70%
   );
+}
+
+[data-theme="light"] .login-illustration {
+  background: linear-gradient(
+    145deg,
+    rgba(231, 84, 128, 0.08) 0%,
+    rgba(176, 92, 255, 0.05) 50%,
+    rgba(250, 247, 249, 0.8) 100%
+  );
+  border-right-color: rgba(231, 84, 128, 0.12);
+}
+
+[data-theme="light"] .illustration-heading {
+  color: #1a1622;
+}
+
+[data-theme="light"] .illustration-subtext {
+  color: #6d6475;
+}
+
+[data-theme="light"] .illustration-pill {
+  background: rgba(231, 84, 128, 0.08);
+  border-color: rgba(231, 84, 128, 0.18);
+  color: #843250;
 }
 
 [data-theme="light"] .login-card {
@@ -523,14 +682,27 @@
   color: #6d6475;
 }
 
-/* Responsive adjustments */
-@media (max-width: 480px) {
-  .login-card {
-    padding: 28px 20px 24px;
-    border-radius: 20px;
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+@media (max-width: 980px) {
+  .login-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8) var(--space-4);
   }
 
-  .login-title {
-    font-size: 1.5rem;
+  .login-illustration {
+    display: none !important;
+  }
+
+  .mobile-hat-banner {
+    display: flex;
+  }
+
+  .login-card {
+    padding: 30px 24px 26px;
+    border-radius: 20px;
   }
 }

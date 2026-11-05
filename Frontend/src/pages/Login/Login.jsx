@@ -129,8 +129,39 @@ export default function Login() {
       {/* Atmospheric ambient glow backdrop */}
       <div className="login-ambient-glow" aria-hidden="true" />
 
-      <main className="login-card-container">
+      {/* Left side: Modern Hero Illustration with the floating graduation hat */}
+      <aside className="login-illustration" aria-hidden="true">
+        <div className="illustration-glow-ambient" />
+        <div className="illustration-content">
+          <div className="illustration-hat-wrapper">
+            <div className="illustration-hat-glow" />
+            <span className="illustration-icon">🎓</span>
+          </div>
+
+          <h2 className="illustration-heading">
+            Welcome to <span className="gradient-text">Study Buddy</span>
+          </h2>
+
+          <p className="illustration-subtext">
+            Your calm, all-in-one academic workspace for learning, planning, and growing. Join students and faculty worldwide.
+          </p>
+
+          <div className="illustration-features">
+            <span className="illustration-pill">✨ AI Tutor &amp; Doubts</span>
+            <span className="illustration-pill">💻 Multi-Language Code Lab</span>
+            <span className="illustration-pill">📚 Real-Time Progress</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* Right side: Login Card */}
+      <main className="login-form-side">
         <div className="login-card">
+          {/* Mobile floating hat badge */}
+          <div className="mobile-hat-banner" aria-hidden="true">
+            <span className="mobile-hat-icon">🎓</span>
+          </div>
+
           {/* Brand header */}
           <div className="login-header">
             <Link to="/" className="login-logo" title="Study Buddy Home">
